@@ -113,18 +113,37 @@ endif()
 include_directories(ext/eigen ext/glfw/include ext/nanovg/src include ${CMAKE_CURRENT_BINARY_DIR})
 
 # Run simple C converter to put font files into the data segment
-add_executable(bin2c resources/bin2c.c)
-set(bin2c_cmdline resources.cpp resources.h)
-file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.ttf")
-foreach(file ${resources})
-  list(APPEND bin2c_cmdline ${file})
-endforeach()
+#add_executable(bin2c resources/bin2c.c)
+#set(bin2c_cmdline resources.cpp resources.h)
+#file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.ttf")
+#foreach(file ${resources})
+#  list(APPEND bin2c_cmdline ${file})
+#endforeach()
 
 # Run bin2c on resource files
+#add_custom_command(
+#  OUTPUT resources.cpp resources.h
+#  COMMAND bin2c ARGS ${bin2c_cmdline}
+#  DEPENDS bin2c ${resources}
+#  COMMENT "Running bin2c"
+#  PRE_BUILD VERBATIM)
+
+# Run bin2c on resource files
+add_executable(bin2c resources/bin2c.c)
+set(TTF_FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/resources/entypo.ttf
+  ${CMAKE_CURRENT_SOURCE_DIR}/resources/Roboto-Bold.ttf
+  ${CMAKE_CURRENT_SOURCE_DIR}/resources/Roboto-Regular.ttf)
+file(GLOB FRAG_FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.frag")
+file(GLOB VERT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.vert")
+#file(GLOB GEO_FILES  "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.geo")
+#set(IM_RESOURCES ${PNG_FILES} ${FRAG_FILES} ${VERT_FILES} ${GEO_FILES})
+set(IM_RESOURCES ${TTF_FILES} ${FRAG_FILES} ${VERT_FILES})
+
 add_custom_command(
-  OUTPUT resources.cpp resources.h
-  COMMAND bin2c ARGS ${bin2c_cmdline}
-  DEPENDS bin2c ${resources}
+  OUTPUT resources.cpp
+  COMMAND bin2c ARGS resources.cpp resources.h ${IM_RESOURCES}
+  DEPENDS bin2c ${IM_RESOURCES}
   COMMENT "Running bin2c"
   PRE_BUILD VERBATIM)
 
@@ -233,8 +252,12 @@ endif()
 if(NANOGUI_BUILD_EXAMPLE)
   add_executable(example1 src/example1.cpp)
   add_executable(example2 src/example2.cpp)
+  add_executable(shellmaps
+	src/shellmapsmain.cpp
+	src/viewer.h src/viewer.cpp)
   target_link_libraries(example1 nanogui ${NANOGUI_EXTRA_LIBS})
   target_link_libraries(example2 nanogui ${NANOGUI_EXTRA_LIBS})
+  target_link_libraries(shellmaps nanogui ${NANOGUI_EXTRA_LIBS})
 
   # Copy icons for example application
   file(COPY resources/icons DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
