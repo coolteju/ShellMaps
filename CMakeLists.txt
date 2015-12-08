@@ -258,6 +258,8 @@ if(NANOGUI_BUILD_EXAMPLE)
 	src/mycommon.h
 	src/meshio.h src/meshio.cpp
 	src/tiny_obj_loader.h
+	src/trimesh.h src/trimesh.cpp
+	src/shellmapshelper.h src/shellmapshelper.cpp
   )
   target_link_libraries(example1 nanogui ${NANOGUI_EXTRA_LIBS})
   target_link_libraries(example2 nanogui ${NANOGUI_EXTRA_LIBS})

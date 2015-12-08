@@ -13,13 +13,14 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	window->setPosition(Eigen::Vector2i(15, 15));
 	window->setLayout(new GroupLayout);
 
-	std::string meshFileName = "1.png";
+	static std::string meshFileName = "1.png";
 
 	Button *b = new Button(window, "Open");
 	b->setCallback([&] {
 //		cout << "Load mesh file: " << file_dialog(
 //		{ {"obj", "..."}, }, false);
 		meshFileName = file_dialog({ {"obj", "..."}, }, false);	// run-time error here, can not capute variables in this scope!!!
+		cout << meshFileName << endl;
 	});
 
 	cout << meshFileName << std::endl;
