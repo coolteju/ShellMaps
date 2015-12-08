@@ -254,7 +254,11 @@ if(NANOGUI_BUILD_EXAMPLE)
   add_executable(example2 src/example2.cpp)
   add_executable(shellmaps
 	src/shellmapsmain.cpp
-	src/viewer.h src/viewer.cpp)
+	src/viewer.h src/viewer.cpp
+	src/mycommon.h
+	src/meshio.h src/meshio.cpp
+	src/tiny_obj_loader.h
+  )
   target_link_libraries(example1 nanogui ${NANOGUI_EXTRA_LIBS})
   target_link_libraries(example2 nanogui ${NANOGUI_EXTRA_LIBS})
   target_link_libraries(shellmaps nanogui ${NANOGUI_EXTRA_LIBS})
