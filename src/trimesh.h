@@ -19,8 +19,6 @@ public:
 	TriMesh();
 	virtual ~TriMesh();
 
-	void loadMesh(const std::vector<Vector3f> &positions, const std::vector<Vector3u> &triangles, const std::vector<Vector2f> &texcoords);
-	void loadMesh(const std::vector<Vector3f> &positions, const std::vector<Vector3u> &triangles, const std::vector<Vector2f> &texcoords, const std::vector<Vector3f> &normals);
 	inline const Vector3f* getVertexNormals();
 
 protected:

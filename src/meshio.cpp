@@ -2,7 +2,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-void loadObj(const std::string &filename, std::vector<Vector3f> &V, std::vector<Vector3u> &F) {
+void loadObj(const std::string &filename, MatrixXu &F, MatrixXf &V) {
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 	std::string err;
@@ -16,16 +16,15 @@ void loadObj(const std::string &filename, std::vector<Vector3f> &V, std::vector<
 
 	tinyobj::shape_t shape = shapes[0];		// only handle the first shape
 
-	// load V
-	assert(shape.mesh.positions.size() % 3 == 0);
-	size_t VSize = shape.mesh.positions.size() / 3;
-	V.reserve(VSize);
-	// row major or column major depended? ok, it's vector element, no dependency here!
-	memcpy(V.data(), shape.mesh.positions.data(), sizeof(float) * VSize * 3);	//  both underlying data are float type
-
 	// load F
 	assert(shape.mesh.indices.size() % 3 == 0);
 	size_t FSize = shape.mesh.indices.size() / 3;
-	F.reserve(FSize);
-	memcpy(F.data(), shape.mesh.indices.data(), sizeof(unsigned int) * FSize * 3);	// F.data: uint32, indices: unsigned int
+	F.resize(3, FSize);
+	memcpy(F.data(), shape.mesh.indices.data(), sizeof(uint32_t) * FSize * 3);	// F.data: uint32, indices: unsigned int
+
+	// load V
+	assert(shape.mesh.positions.size() % 3 == 0);
+	size_t VSize = shape.mesh.positions.size() / 3;
+	V.resize(3, VSize);
+	memcpy(V.data(), shape.mesh.positions.data(), sizeof(float) * VSize * 3);
 }
