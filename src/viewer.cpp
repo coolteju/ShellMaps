@@ -43,7 +43,6 @@ Viewer::~Viewer() {
 }
 
 void Viewer::repaint() {
-	mNeedsRepaint = true;
 	glfwPostEmptyEvent();
 }
 
@@ -79,7 +78,7 @@ bool Viewer::mouseMotionEvent(const Vector2i & p, const Vector2i & rel, int butt
 		else if (mTranslate) {
 			Matrix4f model, view, proj;
 			computeCameraMatrices(model, view, proj);
-			float zval = project(mMeshStats.mWeightedCenter.cast<float>(), model, proj, mSize).z();
+			float zval = project(mMeshStats.mWeightedCenter.cast<float>(), view * model, proj, mSize).z();
 			Vector3f pos1 = unproject(Vector3f(p.x(), mSize.y() - p.y(), zval), view * model, proj, mSize);
 			Vector3f pos0 = unproject(Vector3f(mTranslateStart.x(), mSize.y() - mTranslateStart.y(), zval), view * model, proj, mSize);
 			mCamera.modelTranslation = mCamera.modelTranslation_start + (pos1 - pos0);
@@ -113,56 +112,33 @@ bool Viewer::mouseButtonEvent(const Vector2i & p, int button, bool down, int mod
 }
 
 void Viewer::draw(NVGcontext * ctx) {
-	/* Animate the scrollbar */
-//	mProgress->setValue(std::fmod((float)glfwGetTime() / 10, 1.0f));
-
-	/* Draw the user interface */
 	Screen::draw(ctx);
 }
 
 void Viewer::drawContents() {
-	/* Draw the window contents using OpenGL */
-//	mShader.bind();
+	Matrix4f model, view, proj;
+	computeCameraMatrices(model, view, proj);
 
-	/*
-	Matrix4f mvp;
-	mvp.setIdentity();
-	mvp.topLeftCorner<3, 3>() = Matrix3f(Eigen::AngleAxisf((float)glfwGetTime(), Vector3f::UnitZ())) * 0.25f;
+	std::function<void(uint32_t, uint32_t)> drawFunctor[LayerCount];
 
-	mvp.row(0) *= (float)mSize.y() / (float)mSize.x();
+	drawFunctor[InputMeshWireFrame] = [&](uint32_t offset, uint32_t count) {
+		mShader.bind();
+		mShader.setUniform("modelViewProj", Matrix4f(proj * view * model));
+		mShader.setUniform("intensity", 0.6f);
 
-	mShader.setUniform("modelViewProj", mvp);
-	*/
+		mShader.drawIndexed(GL_TRIANGLES, offset, count);
+	};
 
-	/* Draw 2 triangles starting at index 0 */
-//	mShader.drawIndexed(GL_TRIANGLES, 0, 2);
-	if (mNeedsRepaint) {
-		Matrix4f model, view, proj;
-		computeCameraMatrices(model, view, proj);
+	uint32_t drawAmount[LayerCount];
+	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
 
-		std::function<void(uint32_t, uint32_t)> drawFunctor[LayerCount];
+	const int drawOrder[] = {
+		InputMeshWireFrame
+	};
 
-		drawFunctor[InputMeshWireFrame] = [&](uint32_t offset, uint32_t count) {
-			mShader.bind();
-			mShader.setUniform("modelViewProj", Matrix4f(proj * view * model));
-			mShader.setUniform("intensity", 0.6f);
-
-			mShader.drawIndexed(GL_TRIANGLES, offset, count);
-		};
-
-		uint32_t drawAmount[LayerCount];
-		drawAmount[InputMeshWireFrame] = mMesh.F().cols();
-
-		const int drawOrder[] = {
-			InputMeshWireFrame
-		};
-
-		for (uint32_t j = 0; j < sizeof(drawOrder) / sizeof(int); ++j) {
-			uint32_t i = drawOrder[j];
-			drawFunctor[i](0, drawAmount[i]);
-		}
-
-		mNeedsRepaint = false;
+	for (uint32_t j = 0; j < sizeof(drawOrder) / sizeof(int); ++j) {
+		uint32_t i = drawOrder[j];
+		drawFunctor[i](0, drawAmount[i]);
 	}
 }
 
@@ -177,13 +153,10 @@ void Viewer::loadInput(std::string & meshFileName) {
 	mMesh.setF(std::move(F));
 	mMesh.setV(std::move(V));
 
-//	glfwMakeContextCurrent(mGLFWWindow);
-//	mShader.invalidateAttribs();
 	mShader.bind();
 	mShader.uploadAttrib("position", mMesh.V());
 	mShader.uploadIndices(mMesh.F());
 
-	// TODO:
 	mCamera.modelTranslation = -mMeshStats.mWeightedCenter.cast<float>();
 	mCamera.modelZoom = 3.0f / (mMeshStats.mAABB.max - mMeshStats.mAABB.min).cwiseAbs().maxCoeff();
 }

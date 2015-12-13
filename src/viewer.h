@@ -50,7 +50,6 @@ protected:
 
 	/* OpenGL objects */
 	GLShader mShader;
-	bool mNeedsRepaint;
 
 	/* GUI-related */
 	enum Layers {
