@@ -14,7 +14,3 @@ void TriMesh::free() {
 	mUV.resize(0, 0);
 	mVN.resize(0, 0);
 }
-
-void TriMesh::computeVertexNormals() {
-
-}

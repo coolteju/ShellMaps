@@ -24,7 +24,7 @@ public:
 	void setV(MatrixXf &&V) { mV = std::move(V); }
 	void setF(MatrixXu &&F) { mF = std::move(F); }
 	void setUV(MatrixXf &&UV) { mUV = std::move(UV); }
-//	inline const MatrixXf& getVertexNormals();
+
 	inline const MatrixXf& V() const { return mV; }
 	inline const MatrixXu& F() const { return mF; }
 	inline MatrixXf& V() { return mV; }
@@ -32,10 +32,6 @@ public:
 	
 
 	void free();
-
-protected:
-	void computeVertexNormals();
-
 private:
 	std::string mName;
 	MatrixXf mV;			// mesh vertices

@@ -124,9 +124,11 @@ void Viewer::drawContents() {
 	drawFunctor[InputMeshWireFrame] = [&](uint32_t offset, uint32_t count) {
 		mShader.bind();
 		mShader.setUniform("modelViewProj", Matrix4f(proj * view * model));
-		mShader.setUniform("intensity", 0.6f);
+		mShader.setUniform("vertexColor", Vector3f(1.0, 1.0, 1.0));
 
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		mShader.drawIndexed(GL_TRIANGLES, offset, count);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	};
 
 	uint32_t drawAmount[LayerCount];
