@@ -4,7 +4,8 @@
 #include <vector>
 
 using nanogui::Vector3f;
-using nanogui::Vector2f;
+using nanogui::MatrixXf;
+using nanogui::MatrixXu;
 
 struct TangentSpace {
 	Vector3f dpdu;
@@ -19,19 +20,28 @@ public:
 	TriMesh();
 	virtual ~TriMesh();
 
-	inline const Vector3f* getVertexNormals();
+	void setName(const std::string& meshName) { mName = meshName; }
+	void setV(MatrixXf &&V) { mV = std::move(V); }
+	void setF(MatrixXu &&F) { mF = std::move(F); }
+	void setUV(MatrixXf &&UV) { mUV = std::move(UV); }
+//	inline const MatrixXf& getVertexNormals();
+	inline const MatrixXf& V() const { return mV; }
+	inline const MatrixXu& F() const { return mF; }
+	inline MatrixXf& V() { return mV; }
+	inline MatrixXu& F() { return mF; }
+	
+
+	void free();
 
 protected:
 	void computeVertexNormals();
-	void computeFaceNormals();
 
 private:
 	std::string mName;
-	Vector3f *mVertices;			// mesh vertices
-	Vector3u *mTriangles;			// triangles indices
-	Vector3f *mVertexNormals;		// per vertex outer direction vector, computed based on ajacent facets' normals which share the vertex
-	Vector2f *mTexcoords;			// per vertex texcoords
+	MatrixXf mV;			// mesh vertices
+	MatrixXu mF;			// triangles indices
+	MatrixXf mVN;			// per vertex outer direction vector, computed based on ajacent facets' normals which share the vertex
+	MatrixXf mUV;			// per vertex texcoords
 
-	bool hasFaceNormals;
-	bool hasVertexNormals;
+//	bool hasVertexNormals;
 };
