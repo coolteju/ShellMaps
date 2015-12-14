@@ -4,6 +4,7 @@
 #include <nanogui\glutil.h>
 #include "trimesh.h"
 #include "meshstats.h"
+#include "shellmapshelper.h"
 
 using namespace nanogui;
 
@@ -26,6 +27,9 @@ protected:
 	void loadInput(std::string &meshFileName);
 	void computeCameraMatrices(Matrix4f &model, Matrix4f &view, Matrix4f &proj);
 
+	void generateOffsetMesh();
+	void shareGLBuffers();
+
 protected:
 	struct CameraParameters {
 		Arcball arcball;
@@ -47,13 +51,18 @@ protected:
 	/* Data being processing */
 	TriMesh mMesh;
 	MeshStats mMeshStats;
+	TriMesh mOffsetMesh;
 
 	/* OpenGL objects */
 	GLShader mShader;
+	GLShader mOffsetShader;
 
 	/* GUI-related */
 	enum Layers {
 		InputMeshWireFrame,
+		OffsetMeshWireFrame,
 		LayerCount
 	};
+
+	CheckBox *mLayers[LayerCount];
 };

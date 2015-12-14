@@ -10,20 +10,45 @@ using std::endl;
 
 Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	/* ui */
-	Window *window = new Window(this, "Load Mesh");
+	Window *window = new Window(this, "Operation Panel");
 	window->setPosition(Eigen::Vector2i(15, 15));
 	window->setLayout(new GroupLayout);
 
+	/* mesh loader */
+	new Label(window, "load obj mesh", "sans-bold");
 	Button *b = new Button(window, "Open");
 	b->setCallback([&] {
 		std::string meshFileName = file_dialog({ {"obj", "..."}, }, false);
 		loadInput(meshFileName);
 	});
 
+	new Label(window, "generate offset mesh", "sans-bold");
+	b = new Button(window, "Generate");
+	b->setCallback([&] {
+		generateOffsetMesh();
+	});
+
+	// TODO: add slider to set offset value
+
+	/* gui layers */
+	auto layerCB = [&](bool) {
+		repaint();
+	};
+
+	new Label(window, "Select render layers", "sans-bold");
+	mLayers[InputMeshWireFrame] = new CheckBox(window, "Input Mesh Wireframe", layerCB);
+	mLayers[InputMeshWireFrame]->setChecked(true);
+	mLayers[OffsetMeshWireFrame] = new CheckBox(window, "Offset Mesh Wireframe", layerCB);
+
+
 	performLayout(mNVGContext);
 
 	/* openGL */
 	mShader.init("simple_shader",
+		(const char *)shader_simple_vert,
+		(const char *)shader_simple_frag);
+
+	mOffsetShader.init("simple_shader",
 		(const char *)shader_simple_vert,
 		(const char *)shader_simple_frag);
 
@@ -131,16 +156,36 @@ void Viewer::drawContents() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	};
 
+	drawFunctor[OffsetMeshWireFrame] = [&](uint32_t offset, uint32_t count) {
+		mOffsetShader.bind();
+		mOffsetShader.setUniform("modelViewProj", Matrix4f(proj * view * model));
+		mOffsetShader.setUniform("vertexColor", Vector3f(0.5, 0.5, 1.0));
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		mOffsetShader.drawIndexed(GL_TRIANGLES, offset, count);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	};
+
 	uint32_t drawAmount[LayerCount];
 	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
+	drawAmount[OffsetMeshWireFrame] = mOffsetMesh.F().cols();
+
+	bool checked[LayerCount];
+	for (int i = 0; i < LayerCount; ++i) {
+		checked[i] = mLayers[i]->checked();
+	}
 
 	const int drawOrder[] = {
-		InputMeshWireFrame
+		InputMeshWireFrame,
+		OffsetMeshWireFrame
 	};
 
 	for (uint32_t j = 0; j < sizeof(drawOrder) / sizeof(int); ++j) {
 		uint32_t i = drawOrder[j];
-		drawFunctor[i](0, drawAmount[i]);
+
+		if (checked[i]) {
+			drawFunctor[i](0, drawAmount[i]);
+		}
 	}
 }
 
@@ -172,4 +217,29 @@ void Viewer::computeCameraMatrices(Matrix4f & model, Matrix4f & view, Matrix4f &
 	model = mCamera.arcball.matrix();
 	model = scale(model, Vector3f::Constant(mCamera.zoom * mCamera.modelZoom));
 	model = translate(model, mCamera.modelTranslation);
+}
+
+void Viewer::generateOffsetMesh() {
+	MatrixXf oV;
+	MatrixXu oF;
+	float offset = 0.04;	// TODO: estimate based on average edge length of base mesh or user input
+
+	generateOffsetSurface(mMesh.F(), mMesh.V(), oF, oV, offset);
+
+	mOffsetMesh.free();
+	mOffsetMesh.setF(std::move(oF));	// same with base mesh
+	mOffsetMesh.setV(std::move(oV));
+
+	// TODO: upload data to shader
+	mOffsetShader.bind();
+	mOffsetShader.uploadAttrib("position", mOffsetMesh.V());
+	mOffsetShader.uploadIndices(mOffsetMesh.F());
+
+	// share indices
+//	shareGLBuffers();
+}
+
+void Viewer::shareGLBuffers() {
+	mOffsetShader.bind();
+	mOffsetShader.shareAttrib(mShader, "indices");
 }

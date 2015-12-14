@@ -64,5 +64,6 @@ void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N) {
 
 	std::cout << "Done. (";
 	if (badFaces > 0)
-		std::cout << badFaces << " degenerate faces." << std::endl;
+		std::cout << badFaces << " degenerate faces.";
+	std::cout << ")" << std::endl;
 }
