@@ -22,13 +22,45 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		loadInput(meshFileName);
 	});
 
+	/* offset panel */
+	new Label(window, "offset value", "sans-bold");
+	Widget *offsetPanel = new Widget(window);
+	offsetPanel->setLayout(
+		new BoxLayout(Orientation::Horizontal, Alignment::Middle, 0, 10));
+	mOffsetSlider = new Slider(offsetPanel);
+	mOffsetSlider->setValue(0.5f);
+	mOffsetSlider->setId("offsetSlider");
+	mOffsetSlider->setFixedWidth(60);
+
+	mOffsetBox = new TextBox(offsetPanel);
+	mOffsetBox->setFixedSize(Vector2i(80, 25));
+	mOffsetBox->setValue("0");
+	mOffsetBox->setId("offsetBox");
+
+	mOffsetSlider->setCallback([&](float value) {
+		float min = std::log(1e-5f);
+		float max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+		float offset = std::exp((1 - value) * min + value * max);
+
+		char tmp[10];
+		snprintf(tmp, sizeof(tmp), "%.3f", offset);
+		mOffsetBox->setValue(tmp);
+	});
+
+	mOffsetSlider->setFinalCallback([&](float value) {
+		float min = std::log(1e-5f);
+		float max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+		float offset = std::exp((1 - value) * min + value * max);
+
+		setMeshOffset(offset);
+	});
+
+	// Generate offset mesh button
 	new Label(window, "generate offset mesh", "sans-bold");
 	b = new Button(window, "Generate");
 	b->setCallback([&] {
 		generateOffsetMesh();
 	});
-
-	// TODO: add slider to set offset value
 
 	/* gui layers */
 	auto layerCB = [&](bool) {
@@ -39,6 +71,16 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	mLayers[InputMeshWireFrame] = new CheckBox(window, "Input Mesh Wireframe", layerCB);
 	mLayers[InputMeshWireFrame]->setChecked(true);
 	mLayers[OffsetMeshWireFrame] = new CheckBox(window, "Offset Mesh Wireframe", layerCB);
+
+	window = new Window(this, "Information");
+	window->setPosition(Vector2i(250, 15));
+	window->setLayout(new GroupLayout);
+
+	new Label(window, "Information", "sans-bold");
+	b = new Button(window, "Print info");
+	b->setCallback([&] {
+		printInformation();
+	});
 
 
 	performLayout(mNVGContext);
@@ -206,6 +248,9 @@ void Viewer::loadInput(std::string & meshFileName) {
 
 	mCamera.modelTranslation = -mMeshStats.mWeightedCenter.cast<float>();
 	mCamera.modelZoom = 3.0f / (mMeshStats.mAABB.max - mMeshStats.mAABB.min).cwiseAbs().maxCoeff();
+
+	// Initialize offset
+	setMeshOffset(mMeshStats.mAverageEdgeLength);
 }
 
 void Viewer::computeCameraMatrices(Matrix4f & model, Matrix4f & view, Matrix4f & proj) {
@@ -222,7 +267,7 @@ void Viewer::computeCameraMatrices(Matrix4f & model, Matrix4f & view, Matrix4f &
 void Viewer::generateOffsetMesh() {
 	MatrixXf oV;
 	MatrixXu oF;
-	float offset = 0.04;	// TODO: estimate based on average edge length of base mesh or user input
+	float offset = (mOffset >= 0.0f ? mOffset : 0.0f);
 
 	generateOffsetSurface(mMesh.F(), mMesh.V(), oF, oV, offset);
 
@@ -230,16 +275,44 @@ void Viewer::generateOffsetMesh() {
 	mOffsetMesh.setF(std::move(oF));	// same with base mesh
 	mOffsetMesh.setV(std::move(oV));
 
-	// TODO: upload data to shader
 	mOffsetShader.bind();
 	mOffsetShader.uploadAttrib("position", mOffsetMesh.V());
-	mOffsetShader.uploadIndices(mOffsetMesh.F());
+//	mOffsetShader.uploadIndices(mOffsetMesh.F());
 
 	// share indices
-//	shareGLBuffers();
+	shareGLBuffers();
 }
 
 void Viewer::shareGLBuffers() {
 	mOffsetShader.bind();
 	mOffsetShader.shareAttrib(mShader, "indices");
+}
+
+void Viewer::setMeshOffset(float offset) {
+	char tmp[10];
+	snprintf(tmp, sizeof(tmp), "%.3f", offset);
+
+	float value = std::log(offset);
+	float min = std::log(1e-5f);
+	float max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+
+	mOffsetSlider->setValue((value - min) / (max - min));
+	mOffsetBox->setValue(tmp);
+
+	mOffset = offset;
+}
+
+void Viewer::printInformation() {
+	cout << "Base mesh:" << "\n";
+	cout << "Vertex count: " << mMesh.V().cols() << "\n";
+	cout << "Triangles: " << mMesh.F().cols() << "\n";
+	cout << "minEdgeLenth, maxEdgeLength, avgEdgeLength: " << mMeshStats.mMinimumEdgeLength << ", "
+		<< mMeshStats.mMaximumEdgeLength << ", "
+		<< mMeshStats.mAverageEdgeLength << "\n";
+
+	cout << "-------------------" << "\n";
+	cout << "Offset:" << "\n";
+	cout << "offset value: " << mOffset << "\n";
+
+	cout << endl;
 }

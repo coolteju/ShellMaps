@@ -29,6 +29,9 @@ protected:
 
 	void generateOffsetMesh();
 	void shareGLBuffers();
+	void setMeshOffset(float offset);
+
+	void printInformation();
 
 protected:
 	struct CameraParameters {
@@ -52,6 +55,7 @@ protected:
 	TriMesh mMesh;
 	MeshStats mMeshStats;
 	TriMesh mOffsetMesh;
+	float mOffset;
 
 	/* OpenGL objects */
 	GLShader mShader;
@@ -65,4 +69,6 @@ protected:
 	};
 
 	CheckBox *mLayers[LayerCount];
+	Slider *mOffsetSlider;
+	TextBox *mOffsetBox;
 };

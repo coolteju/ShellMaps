@@ -12,6 +12,11 @@ MeshStats computeMeshStats(const MatrixXu &F, const MatrixXf &V) {
 		for (int i = 0; i < 3; i++) {
 			faceCenter += v[i];
 			aabb.expandBy(v[i]);
+
+			float edgeLength = (v[i] - v[i == 2 ? 0 : (i + 1)]).norm();
+			stats.mAverageEdgeLength += edgeLength;
+			stats.mMaximumEdgeLength = std::max(stats.mMaximumEdgeLength, (double)edgeLength);
+			stats.mMinimumEdgeLength = std::min(stats.mMinimumEdgeLength, (double)edgeLength);
 		}
 
 		stats.mAABB.expandBy(aabb);
@@ -23,6 +28,7 @@ MeshStats computeMeshStats(const MatrixXu &F, const MatrixXf &V) {
 	}
 
 	stats.mWeightedCenter /= stats.mSurfaceArea;
+	stats.mAverageEdgeLength /= trianglesCount * 3;
 
 	return stats;
 }
