@@ -6,14 +6,16 @@
 using nanogui::MatrixXf;
 using nanogui::MatrixXu;
 
-typedef std::unordered_map<std::string, std::pair<int, int>> AdjacentTrianglesTable;
+/* 
+   Edge to adjacent triangles mapping, supporting triangles mesh.  Map edge(string: pId0_str + pId1_str)
+   to the two adjacent triangles ids(pair<int, int>). pId0 must be smaller than pId1, thus creating the same
+   key for an edge.
+   If an edge only have one adjacent triangle, 'id', then the pair value is <id, -1>.
+*/
+typedef std::unordered_map<std::string, std::pair<int, int>> EdgeToAdjacentTrianglesMap;
 
-struct EdgeAdjacentTrianglesTable {
-	AdjacentTrianglesTable adjacent;
 
-	int getAdjacentTriangle(const uint32_t trianlge, const uint32_t edgeStartPoint, const uint32_t edgeEndPoint);
+extern void buildEdgeAdjacentTrianglesTable(const MatrixXu &F, EdgeToAdjacentTrianglesMap &adjacentMap);
 
-	EdgeAdjacentTrianglesTable() { }
-};
-
-extern EdgeAdjacentTrianglesTable buildEdgeAdjacentTrianglesTable(const MatrixXu &F, const MatrixXf &V);
+/* Lookup the adjacent triangle with given current triangle id and the edge. Return adjancent triangle id if exists, or return -1. */
+extern int lookupEdgepAdjacentTriangle(uint32_t triangle, uint32_t p0, uint32_t p1, const EdgeToAdjacentTrianglesMap &adjacentMap);
