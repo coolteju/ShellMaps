@@ -11,6 +11,10 @@ void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, M
 	oV += offset * N;
 }
 
+void solvePatternAssiganmentInconsistency(const MatrixXu &F, MatrixXu &P, uint32_t f) {
+	bool *visited = new bool[F.cols()];
+}
+
 void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	P.resize(F.rows(), F.cols());
 //	P.setZero();	// Pattern = None
@@ -21,8 +25,11 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 
 	std::function<SPLIT_PATTEN(uint32_t, uint32_t, uint32_t)> getEdgePattern;
 	getEdgePattern = [&F, &P](uint32_t f, uint32_t p0, uint32_t p1) { 
-		for (int i = 0; i < 3; ++i) {
-			if (F(i, f) == p0 || F(i, f) == p1) return static_cast<SPLIT_PATTEN>(P(i, f));
+		for (int i = 0; i < 3; i++) {
+			int j = (i == 2 ? 0 : i + 1);
+			if ((F(i, f) == p0 && F(j, f) == p1) || (F(i, f) == p1 && F(j, f) == p0)) {
+				return static_cast<SPLIT_PATTEN>(P(i, f));
+			}
 		}
 		std::cerr << "Find Edge pattern error: the face does not have the input edge/points" << std::endl;
 		return SPLIT_PATTERN_NONE;
@@ -66,46 +73,35 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 			bool inconsistent = (cR == 3 || cF == 3);
 			if (inconsistent) {
 				// solve inconsistency, RRR->RRF, FFF->FFR
+				solvePatternAssiganmentInconsistency();
 			}
 			else {
-				/* remaining edge pattern assignment strategy:
+				/* remaining edges' pattern assignment strategy:
 					NNN -> RFF,
 					FNN	-> RR,	// only 1 F, 
 					RNN	-> FF
 					FFN	-> R
 					RRN	-> F
-					RFN	-> R
-					FRN	-> R
-				*/
+					RFN	-> R */
+				SPLIT_PATTEN remain[3] = { SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
 
-				std::function<void()> remainingAssignPattern = [&]() {
-					
+				if (cN == 3) { remain[0] = SPLIT_PATTERN_R, remain[1] = remain[2] = SPLIT_PATTERN_F; }
+				else if (cN == 2 && cF == 1) { remain[0] = remain[1] = SPLIT_PATTERN_R; }
+				else if (cN == 2 && cR == 1) { remain[0] = remain[1] = SPLIT_PATTERN_F; }
+				else if (cN == 1 && cF == 2) { remain[0] = SPLIT_PATTERN_R; }
+				else if (cN == 1 && cR == 2) { remain[0] = SPLIT_PATTERN_F; }
+				else if (cN == 1 && cF == 1 && cR == 1) { remain[0] = SPLIT_PATTERN_R; }
+
+				std::function<void(SPLIT_PATTEN [])> assignRemainPattern = [&](SPLIT_PATTEN p[3]) {
+					uint8_t c = 0;
+					for (int i = 0; i < 3; ++i) {
+						if (patterns[i] == SPLIT_PATTERN_NONE) {
+							patterns[i] = p[c];
+							++c;
+						}
+					}
 				};
-
-				if (cN == 3) {
-					SPLIT_PATTEN remaning[3] = {SPLIT_PATTERN_R, SPLIT_PATTERN_F, SPLIT_PATTERN_F};
-					uint8_t remainingCount = 3;
-				}
-				else if (cN == 2 && cF == 1) {
-					SPLIT_PATTEN remaning[3] = {SPLIT_PATTERN_R, SPLIT_PATTERN_R, SPLIT_PATTERN_NONE};
-					uint8_t remainingCount = 2;
-				}
-				else if (cN == 2 && cR == 1) {
-					SPLIT_PATTEN remaning[3] = {SPLIT_PATTERN_F, SPLIT_PATTERN_F, SPLIT_PATTERN_NONE};
-					uint8_t remainingCount = 2;
-				}
-				else if (cN == 1 && cF == 2) {
-					SPLIT_PATTEN remaning[3] = {SPLIT_PATTERN_R, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE};
-					uint8_t remainingCount = 1;
-				}
-				else if (cN == 1 && cR == 2) {
-					SPLIT_PATTEN remaning[3] = { SPLIT_PATTERN_F, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
-					uint8_t remainingCount = 1;
-				}
-				else if (cN == 1 && cF == 1 && cR == 1) {
-					SPLIT_PATTEN remaning[3] = { SPLIT_PATTERN_R, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
-					uint8_t remainingCount = 1;
-				}
+				assignRemainPattern(remain);
 			}
 		};
 	}
