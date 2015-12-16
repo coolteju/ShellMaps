@@ -18,4 +18,4 @@ typedef std::unordered_map<std::string, std::pair<int, int>> EdgeToAdjacentTrian
 extern void buildEdgeAdjacentTrianglesTable(const MatrixXu &F, EdgeToAdjacentTrianglesMap &adjacentMap);
 
 /* Lookup the adjacent triangle with given current triangle id and the edge. Return adjancent triangle id if exists, or return -1. */
-extern int lookupEdgepAdjacentTriangle(uint32_t triangle, uint32_t p0, uint32_t p1, const EdgeToAdjacentTrianglesMap &adjacentMap);
+extern int lookupEdgeAdjacentTriangle(uint32_t triangle, uint32_t p0, uint32_t p1, const EdgeToAdjacentTrianglesMap &adjacentMap);
