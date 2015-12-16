@@ -9,7 +9,7 @@ using nanogui::MatrixXu;
 
 extern void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, MatrixXf &oV, const float offset);
 
-enum SPLIT_PATTEN {
+enum SPLIT_PATTERN {
 	SPLIT_PATTERN_NONE = 0,
 	SPLIT_PATTERN_R,
 	SPLIT_PATTERN_F,

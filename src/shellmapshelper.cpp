@@ -11,9 +11,17 @@ void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, M
 	oV += offset * N;
 }
 
-void solvePatternAssiganmentInconsistency(const MatrixXu &F, MatrixXu &P, uint32_t f) {
+//bool solveInconsistencyRecursively(const MatrixXu &F, const EdgeToAdjacentTrianglesMap &adjacentMap, MatrixXu &P, uint32_t f, bool visited[]) {
+	/* Can solve it directly by assigning another suitable pattern? */
+//}
+
+/*
+bool solvePatternAssignmentInconsistency(const MatrixXu &F, const EdgeToAdjacentTrianglesMap &adjacentMap, MatrixXu &P, uint32_t f) {
 	bool *visited = new bool[F.cols()];
-}
+	memset(visited, false, sizeof(bool) * F.cols());
+
+	return solveInconsistencyRecursively(F, adjacentMap, P, f, visited);
+}*/
 
 void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	P.resize(F.rows(), F.cols());
@@ -23,20 +31,28 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	EdgeToAdjacentTrianglesMap adjacentMap;
 	buildEdgeAdjacentTrianglesTable(F, adjacentMap);
 
-	std::function<SPLIT_PATTEN(uint32_t, uint32_t, uint32_t)> getEdgePattern;
-	getEdgePattern = [&F, &P](uint32_t f, uint32_t p0, uint32_t p1) { 
-		for (int i = 0; i < 3; i++) {
+	/* Get edge pattern based on triangel and edge, supporting adjacent triangle query */
+	auto getEdgePattern = [&F, &P](uint32_t f, uint32_t p0, uint32_t p1) -> SPLIT_PATTERN { 
+		for (int i = 0; i < 3; ++i) {
 			int j = (i == 2 ? 0 : i + 1);
 			if ((F(i, f) == p0 && F(j, f) == p1) || (F(i, f) == p1 && F(j, f) == p0)) {
-				return static_cast<SPLIT_PATTEN>(P(i, f));
+				return static_cast<SPLIT_PATTERN>(P(i, f));
 			}
 		}
 		std::cerr << "Find Edge pattern error: the face does not have the input edge/points" << std::endl;
 		return SPLIT_PATTERN_NONE;
 	};
 
-	uint32_t trianglesCount = F.cols();
-	for (uint32_t f = 0; f < trianglesCount; ++f) {
+	auto setEdgePattern = [&F, &P](uint32_t f, uint32_t p0, uint32_t p1, SPLIT_PATTERN p) {
+		for (int i = 0; i < 3; ++i) {
+			int j = (i == 2 ? 0 : i + 1);
+			if ((F(i, f) == p0 && F(j, f) == p1) || (F(i, f) == p1 && F(j, f) == p0)) {
+				P(i, f) = static_cast<uint32_t>(p);
+			}
+		}
+	};
+
+	auto getAdjacentTriangles = [&F, &adjacentMap](uint32_t f, int adjacentTriangles[3]) {
 		uint32_t points[3] = { F(0, f), F(1, f), F(2, f) };
 
 		std::string edges[3];
@@ -46,19 +62,38 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 				: (edges[i] = std::to_string(points[j]) + std::to_string(points[i]));
 		}
 
-		int adjacentTriangles[3] = { -1, -1 , -1 };
+		adjacentTriangles[0] = adjacentTriangles[1] = adjacentTriangles[2] = -1;
 		for (int i = 0; i < 3; ++i) {
 			adjacentTriangles[i] = lookupEdgeAdjacentTriangle(f, points[i], points[i == 2 ? 0 : i + 1], adjacentMap);
 		}
+	};
 
-		SPLIT_PATTEN adjacentEdgePatterns[3] = { SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
+	/* Get three share edge pattern of the three adjacent triangles */
+	auto getAdjacentEdgePatterns = [&F, &P, &adjacentMap, &getEdgePattern, &getAdjacentTriangles](uint32_t f, SPLIT_PATTERN adjacentEdgePatterns[3]) {
+		int adjacentTriangles[3];
+		getAdjacentTriangles(f, adjacentTriangles);
+
+		uint32_t points[3] = { F(0, f), F(1, f), F(2, f) };
+
+		adjacentEdgePatterns[0] = adjacentEdgePatterns[1] = adjacentEdgePatterns[2] = SPLIT_PATTERN_NONE;
 		for (int i = 0; i < 3; ++i) {
 			if (adjacentTriangles[i] != -1) {
 				adjacentEdgePatterns[i] = getEdgePattern(adjacentTriangles[i], points[i], points[i == 2 ? 0 : i + 1]);
 			}
 		}
+	};
 
-		SPLIT_PATTEN patterns[3] = { SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
+	/* Get three edge patterns of one triangle */
+	auto getTriangleEdgePatterns = [&P](uint32_t f, SPLIT_PATTERN triangleEdgePatterns[3]) {
+		for (int i = 0; i < 3; ++i) triangleEdgePatterns[i] = static_cast<SPLIT_PATTERN>(P(i, f));
+	};
+
+	uint32_t trianglesCount = F.cols();
+	for (uint32_t f = 0; f < trianglesCount; ++f) {
+		SPLIT_PATTERN adjacentEdgePatterns[3];
+		getAdjacentEdgePatterns(f, adjacentEdgePatterns);
+
+		SPLIT_PATTERN patterns[3];
 
 		std::function<void()> assignSplittingPattern = [&]() {
 			uint8_t cN = 0, cR = 0, cF = 0;
@@ -71,19 +106,15 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 			}
 
 			bool inconsistent = (cR == 3 || cF == 3);
-			if (inconsistent) {
-				// solve inconsistency, RRR->RRF, FFF->FFR
-				solvePatternAssiganmentInconsistency();
-			}
-			else {
-				/* remaining edges' pattern assignment strategy:
-					NNN -> RFF,
-					FNN	-> RR,	// only 1 F, 
-					RNN	-> FF
-					FFN	-> R
-					RRN	-> F
-					RFN	-> R */
-				SPLIT_PATTEN remain[3] = { SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
+			if (! inconsistent) {
+				/* Remaining edges' pattern filling strategy:
+				NNN -> RFF,
+				FNN	-> RR,	// only 1 F,
+				RNN	-> FF
+				FFN	-> R
+				RRN	-> F
+				RFN	-> R */
+				SPLIT_PATTERN remain[3] = { SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE, SPLIT_PATTERN_NONE };
 
 				if (cN == 3) { remain[0] = SPLIT_PATTERN_R, remain[1] = remain[2] = SPLIT_PATTERN_F; }
 				else if (cN == 2 && cF == 1) { remain[0] = remain[1] = SPLIT_PATTERN_R; }
@@ -92,7 +123,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 				else if (cN == 1 && cR == 2) { remain[0] = SPLIT_PATTERN_F; }
 				else if (cN == 1 && cF == 1 && cR == 1) { remain[0] = SPLIT_PATTERN_R; }
 
-				std::function<void(SPLIT_PATTEN [])> assignRemainPattern = [&](SPLIT_PATTEN p[3]) {
+				auto FillRemainPattern = [&patterns](SPLIT_PATTERN p[3]) {
 					uint8_t c = 0;
 					for (int i = 0; i < 3; ++i) {
 						if (patterns[i] == SPLIT_PATTERN_NONE) {
@@ -101,8 +132,109 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 						}
 					}
 				};
-				assignRemainPattern(remain);
+				FillRemainPattern(remain);
+			}
+			else {
+				// Solve inconsistency, RRR->RRF, FFF->FFR
+				// DFS style to solve it
+				bool *visited = new bool[F.cols()];
+				memset(visited, false, sizeof(bool) * F.cols());
+
+				std::function<bool(uint32_t f)> solveInconsistencyRecursively;	// can not use auto below, must be declearation directly to capture
+				solveInconsistencyRecursively = [&F, &P, &adjacentMap, &visited, &solveInconsistencyRecursively,
+					&getAdjacentEdgePatterns, &getAdjacentTriangles, &getTriangleEdgePatterns, &setEdgePattern](uint32_t f) -> bool {
+
+					/* Can solve it directly by assigning another suitable pattern?
+					This can work if there exists free edges which have no adjacent triangle or have not been assign a splitting pattern. */
+					SPLIT_PATTERN adjacentEdgePatterns[3];
+					getAdjacentEdgePatterns(f, adjacentEdgePatterns);
+
+					uint8_t cN = 0;
+					int freeEdge = -1;	// It means there is no adjacent(or have not assign a pattern) triangle which share this edge
+					for (int i = 0; i < 3; i++) { 
+						if (adjacentEdgePatterns[i] == SPLIT_PATTERN_NONE) {
+							++cN;
+							freeEdge = i;
+							break;
+						}
+					}
+
+					if (cN > 0) {
+						// Solve it directly, just flip the pattern on free edge
+						if (P(freeEdge, f) == SPLIT_PATTERN_R) P(freeEdge, f) = SPLIT_PATTERN_F;
+						else  P(freeEdge, f) = SPLIT_PATTERN_F;
+
+						return true;
+					}
+					else {
+						/* Or can solve it by just flipping one edge pattern of this and adjacent triangle?
+						For example:
+						This triangle: (FFF)(inconsistent), one adjacent triangle has edge patterns: (RRF), then the inconsistency can be solved by
+						flipping the share edge's pattern, the result is, this triangle(RFF), adjacent triangle(FRF).
+						*/
+						int adjacentTriangles[3];
+						getAdjacentTriangles(f, adjacentTriangles);
+
+						// TODO: the adjacentTriangles must all be nonzero, check this if results are not correct (or add other places?)
+
+						SPLIT_PATTERN ajacentTrianglesEdgePatterns[3][3];
+						for (int i = 0; i < 3; ++i)  getTriangleEdgePatterns(adjacentTriangles[i], ajacentTrianglesEdgePatterns[i]);
+
+						uint8_t rR;
+						if (P(0, f) == SPLIT_PATTERN_R) rR = 1;
+						else rR = 2;
+
+						int edgeId = -1;
+						int freeAdjacentTriangle = -1;
+						for (int i = 0; i < 3; ++i) {
+							uint8_t cR = 0;
+							for (int j = 0; j < 3; ++j) { if (ajacentTrianglesEdgePatterns[i][j] == SPLIT_PATTERN_R) ++cR; }
+
+							if (cR == rR) {
+								edgeId = i;
+								freeAdjacentTriangle = adjacentTriangles[i];
+								break;
+							}
+						}
+
+						if (freeAdjacentTriangle > 0) {
+							SPLIT_PATTERN p = static_cast<SPLIT_PATTERN>(P(edgeId, f));
+							SPLIT_PATTERN flip = (p == SPLIT_PATTERN_R ? SPLIT_PATTERN_F : SPLIT_PATTERN_R);
+
+							P(edgeId, f) = static_cast<uint32_t>(flip);
+							setEdgePattern(freeAdjacentTriangle, F(edgeId, f), F((edgeId == 2 ? 0 : edgeId + 1), f), p);
+
+							return true;
+						}
+						else {
+							// Start DFS search, random flip one share edge's pattern of adjacent unvisited triangle
+							visited[f] = true;
+
+							for (int i = 0; i < 3; ++i) {
+								if (!visited[adjacentTriangles[i]]) {
+									SPLIT_PATTERN p = static_cast<SPLIT_PATTERN>(P(i, f));
+									SPLIT_PATTERN flip = (p == SPLIT_PATTERN_R ? SPLIT_PATTERN_F : SPLIT_PATTERN_R);
+
+									P(i, f) = static_cast<uint32_t>(flip);
+									setEdgePattern(adjacentTriangles[i], F(i, f), F((i == 2 ? 0 : i + 1), f), p);
+
+									// check if occurs new inconsistency?
+									// it does make new inconsistency, since all possible sovling situations have been considered?!
+									if (solveInconsistencyRecursively(adjacentTriangles[i])) return true;
+									else {
+										P(i, f) = p;
+										setEdgePattern(adjacentTriangles[i], F(i, f), F((i == 2 ? 0 : i + 1), f), flip);
+									}
+								}
+							}
+
+							return false;
+						}
+					}
+				};
+				solveInconsistencyRecursively(f);
 			}
 		};
+		assignSplittingPattern();
 	}
 }
