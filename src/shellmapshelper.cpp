@@ -11,18 +11,6 @@ void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, M
 	oV += offset * N;
 }
 
-//bool solveInconsistencyRecursively(const MatrixXu &F, const EdgeToAdjacentTrianglesMap &adjacentMap, MatrixXu &P, uint32_t f, bool visited[]) {
-	/* Can solve it directly by assigning another suitable pattern? */
-//}
-
-/*
-bool solvePatternAssignmentInconsistency(const MatrixXu &F, const EdgeToAdjacentTrianglesMap &adjacentMap, MatrixXu &P, uint32_t f) {
-	bool *visited = new bool[F.cols()];
-	memset(visited, false, sizeof(bool) * F.cols());
-
-	return solveInconsistencyRecursively(F, adjacentMap, P, f, visited);
-}*/
-
 void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	P.resize(F.rows(), F.cols());
 //	P.setZero();	// Pattern = None
@@ -236,5 +224,41 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 			}
 		};
 		assignSplittingPattern();
+	}
+}
+
+void constructTetrahera(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
+	uint32_t trianglesCount = F.cols();
+	T.resize(4, 3 * trianglesCount);
+
+	for (uint32_t f = 0; f < trianglesCount; ++f) { // for each trianlge of base mesh, that means, for each prim
+		uint32_t bP[3] = { F(0, f), F(1, f), F(2, f) };
+		uint32_t oP[3] = { oF(0, f), oF(1, f), oF(2, f) };
+		uint32_t p[3] = { P(0, f), P(1, f), P(2, f) };
+
+		/* Construct each of the three tetrahedra in a prism by iterating counter clockwise edge tag and
+		the next counter clockwise edge tag. */
+		for (int i = 0; i < 3; ++i) {
+			int j = (i == 2 ? 0 : i + 1);
+			int k = (j == 2 ? 0 : j + 1);
+			uint32_t t = 3 * f + i;	// tehetradron id
+
+			if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[j])) {
+				T(0, t) = oP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = bP[k];
+			}
+			else if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[j])) {
+				T(0, t) = oP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = oP[k];
+			}
+			else if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[j])) {
+				T(0, t) = bP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = oP[k];
+			}
+			else if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[j])) {
+				T(0, t) = bP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = bP[k];
+			}
+			else {
+				std::cerr << "Invalid prism splitting pattern found." << std::endl;
+				return;
+			}
+		}
 	}
 }

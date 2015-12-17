@@ -23,3 +23,6 @@ enum SPLIT_PATTERN {
 	P(0, i) = 0: edge0(p0->p1) in triangle i has not assigend a pattern.
 */
 extern void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P);
+
+/* F: base mesh(face indices), oF: offset mesh, P: prims splitting pattern, T: Tetrahedra to be computed, size will be: [4, F.cols() * 3] */
+extern void constructTetrahera(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T);
