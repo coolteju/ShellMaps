@@ -38,9 +38,9 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	mOffsetBox->setId("offsetBox");
 
 	mOffsetSlider->setCallback([&](float value) {
-		float min = std::log(1e-5f);
-		float max = std::log(5 * mMeshStats.mMaximumEdgeLength);
-		float offset = std::exp((1 - value) * min + value * max);
+		double min = std::log(1e-5f);
+		double max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+		double offset = std::exp((1 - value) * min + value * max);
 
 		char tmp[10];
 		snprintf(tmp, sizeof(tmp), "%.3f", offset);
@@ -48,8 +48,8 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	});
 
 	mOffsetSlider->setFinalCallback([&](float value) {
-		float min = std::log(1e-5f);
-		float max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+		double min = std::log(1e-5f);
+		double max = std::log(5 * mMeshStats.mMaximumEdgeLength);
 		float offset = std::exp((1 - value) * min + value * max);
 
 		setMeshOffset(offset);
@@ -71,6 +71,7 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	mLayers[InputMeshWireFrame] = new CheckBox(window, "Input Mesh Wireframe", layerCB);
 	mLayers[InputMeshWireFrame]->setChecked(true);
 	mLayers[OffsetMeshWireFrame] = new CheckBox(window, "Offset Mesh Wireframe", layerCB);
+	mLayers[EdgePatternLabel] = new CheckBox(window, "Split Pattern Label on Base Mesh", layerCB);
 
 	window = new Window(this, "Information");
 	window->setPosition(Vector2i(250, 15));
@@ -208,9 +209,50 @@ void Viewer::drawContents() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	};
 
+	drawFunctor[EdgePatternLabel] = [&](uint32_t offset, uint32_t count) {
+		nvgBeginFrame(mNVGContext, mSize[0], mSize[1], mPixelRatio);
+		nvgFontSize(mNVGContext, 14.0f);
+		nvgFontFace(mNVGContext, "sans-bold");
+		nvgTextAlign(mNVGContext, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+		const MatrixXf &V = mMesh.V();
+		const MatrixXu &F = mMesh.F();
+//		const MatrixXu &P = ;
+//		const MatrixXu &N = mMesh.N(); // can calculate outside once and use here
+		nvgFillColor(mNVGContext, Color(200, 200, 255, 200));
+
+		for (uint32_t f = offset; f < offset + count; ++f) {
+			Vector3f points[3] = { V.col(F(0, f)), V.col(F(1, f)), V.col(F(2, f)) };
+			Vector3f fn = Vector3f::Zero();
+			Vector3f d0 = points[1] - points[0],
+				d1 = points[2] - points[0];
+
+			fn = d0.cross(d1);
+			fn /= fn.norm();	// be careful if fn.norm is close to zero
+
+			for (int i = 0; i < 3; ++i) {
+				int j = (i == 2 ? 0 : i + 1);
+				int k = (j == 2 ? 0 : j + 1);
+
+				float wk = 0.01f, wj = (1.0f - wk) / 2.0f, wi = wj;
+				Vector4f pos;
+				pos << (wi*points[i] + wj*points[j] + wk*points[k]).cast<float>(), 1.0f;
+				Eigen::Vector3f coord = project(Vector3f((model * pos).head<3>()), view, proj, mSize);
+
+				std::string patternLabel = "N";
+//				patternLabel = (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(P(i, f))) ? "R" : patternLabel;
+//				patternLabel = (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(P(i, f))) ? "F" : patternLabel;
+
+				// ignore occlusion here
+				nvgText(mNVGContext, coord.x(), mSize[1] - coord.y(), patternLabel.c_str(), nullptr);
+			}
+			nvgEndFrame(mNVGContext);
+		}
+	};
+
 	uint32_t drawAmount[LayerCount];
 	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
 	drawAmount[OffsetMeshWireFrame] = mOffsetMesh.F().cols();
+	drawAmount[EdgePatternLabel] = mMesh.F().cols();
 
 	bool checked[LayerCount];
 	for (int i = 0; i < LayerCount; ++i) {
@@ -219,7 +261,8 @@ void Viewer::drawContents() {
 
 	const int drawOrder[] = {
 		InputMeshWireFrame,
-		OffsetMeshWireFrame
+		OffsetMeshWireFrame,
+		EdgePatternLabel
 	};
 
 	for (uint32_t j = 0; j < sizeof(drawOrder) / sizeof(int); ++j) {
@@ -288,13 +331,13 @@ void Viewer::shareGLBuffers() {
 	mOffsetShader.shareAttrib(mShader, "indices");
 }
 
-void Viewer::setMeshOffset(float offset) {
+void Viewer::setMeshOffset(double offset) {
 	char tmp[10];
 	snprintf(tmp, sizeof(tmp), "%.3f", offset);
 
-	float value = std::log(offset);
-	float min = std::log(1e-5f);
-	float max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+	double value = std::log(offset);
+	double min = std::log(1e-5f);
+	double max = std::log(5 * mMeshStats.mMaximumEdgeLength);
 
 	mOffsetSlider->setValue((value - min) / (max - min));
 	mOffsetBox->setValue(tmp);

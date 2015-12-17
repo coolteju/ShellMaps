@@ -29,7 +29,7 @@ protected:
 
 	void generateOffsetMesh();
 	void shareGLBuffers();
-	void setMeshOffset(float offset);
+	void setMeshOffset(double offset);
 
 	void printInformation();
 
@@ -55,7 +55,7 @@ protected:
 	TriMesh mMesh;
 	MeshStats mMeshStats;
 	TriMesh mOffsetMesh;
-	float mOffset;
+	double mOffset;
 
 	/* OpenGL objects */
 	GLShader mShader;
@@ -65,6 +65,7 @@ protected:
 	enum Layers {
 		InputMeshWireFrame,
 		OffsetMeshWireFrame,
+		EdgePatternLabel,
 		LayerCount
 	};
 

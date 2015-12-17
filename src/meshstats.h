@@ -21,7 +21,8 @@ struct MeshStats {
 		mWeightedCenter(Vector3f::Zero()),
 		mSurfaceArea(0.0f),
 		mMaximumEdgeLength(0.0f),
-		mMinimumEdgeLength(0.0f) { }
+		mMinimumEdgeLength(0.0f),
+		mAverageEdgeLength(0.0f) { }
 };
 
 extern MeshStats computeMeshStats(const MatrixXu &F, const MatrixXf &V);
