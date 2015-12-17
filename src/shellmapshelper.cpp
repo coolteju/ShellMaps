@@ -163,8 +163,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 						int adjacentTriangles[3];
 						getAdjacentTriangles(f, adjacentTriangles);
 
-						// TODO: the adjacentTriangles must all be nonzero, check this if results are not correct (or add other places?)
-
+						// The adjacentTriangles here are  nonzero, check this explictly if results are not correct.
 						SPLIT_PATTERN ajacentTrianglesEdgePatterns[3][3];
 						for (int i = 0; i < 3; ++i)  getTriangleEdgePatterns(adjacentTriangles[i], ajacentTrianglesEdgePatterns[i]);
 
@@ -225,6 +224,58 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 		};
 		assignSplittingPattern();
 	}
+
+	/* Check if pattern P is consistency */
+	#if 1
+	std::cout << "check if the resulting pattern P is consistency(correct): ";
+	for (uint32_t f = 0; f < trianglesCount; ++f) {
+		SPLIT_PATTERN edgePatterns[3];
+		getTriangleEdgePatterns(f, edgePatterns);
+
+		bool hasUnrecognizedPattern = false;
+
+		uint8_t cR = 0, cF = 0, cN = 0;
+		for (int i = 0; i < 3; ++i) {
+			if (SPLIT_PATTERN_R == edgePatterns[i]) cR++;
+			else if (SPLIT_PATTERN_F == edgePatterns[i]) cF++;
+			else if (SPLIT_PATTERN_NONE == edgePatterns[i]) cN++;
+			else {
+				hasUnrecognizedPattern = true;
+				std::cout << "No, edge(" << "i" << ") at face(" << f << ") has unrecognized pattern(" << edgePatterns[i] << ")." << std::endl;
+				break;
+			}
+		}
+		if (hasUnrecognizedPattern) break;
+
+		if (cN > 0) {
+			std::cout << "No, edge(" << "i" << ") at face(" << f << ") has no pattern." << std::endl;
+			break;
+		}
+		else if (cR == 3 || cF == 3) {
+			std::string tmp = (cR == 3 ? "RRR" : "FFF");
+			std::cout << "No, face(" << f << ") has inconsistent pattern(" << tmp << ")."  << std::endl;
+			break;
+		}
+
+		SPLIT_PATTERN adjacentEdgePatterns[3];
+		getAdjacentEdgePatterns(f, adjacentEdgePatterns);
+
+		// Declear it as int, since the triangle may not have complete three adjacent triangles, if not, set -1 respectively.
+		int adjacentTriangles[3];
+		getAdjacentTriangles(f, adjacentTriangles);
+
+		bool hasSamePattern = false;
+		for (int i = 0; i < 3; ++i) {
+			if (edgePatterns[i] == adjacentEdgePatterns[i]) {
+				hasSamePattern = true;
+				std::cout << "No, edge(" << i << ") at face(" << f << ") has same pattern(" << edgePatterns[i]
+					<< ") with adjacent face(" << adjacentTriangles[i] << ")." << std::endl;
+				break;
+			}
+		}
+		if (hasSamePattern) break;
+	}
+	#endif
 }
 
 void constructTetrahera(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
