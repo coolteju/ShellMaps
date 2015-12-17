@@ -7,6 +7,8 @@ void loadObj(const std::string &filename, MatrixXu &F, MatrixXf &V) {
 	std::vector<tinyobj::material_t> materials;
 	std::string err;
 
+	std::cout << "--Load mesh file ..." << std::endl;
+
 	bool ret = tinyobj::LoadObj(shapes, materials, err, filename.c_str());
 
 	if (!err.empty()) std::cerr << err << std::endl;
@@ -27,4 +29,6 @@ void loadObj(const std::string &filename, MatrixXu &F, MatrixXf &V) {
 	size_t VSize = shape.mesh.positions.size() / 3;
 	V.resize(3, VSize);
 	memcpy(V.data(), shape.mesh.positions.data(), sizeof(float) * VSize * 3);
+
+	std::cout << "++Load mesh file done." << std::endl;
 }

@@ -62,6 +62,12 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		generateOffsetMesh();
 	});
 
+	new Label(window, "compute split pattern", "sans-bold");
+	b = new Button(window, "Compute");
+	b->setCallback([&] {
+		computeSplittingPattern();
+	});
+
 	/* gui layers */
 	auto layerCB = [&](bool) {
 		repaint();
@@ -74,7 +80,7 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	mLayers[EdgePatternLabel] = new CheckBox(window, "Split Pattern Label on Base Mesh", layerCB);
 
 	window = new Window(this, "Information");
-	window->setPosition(Vector2i(250, 15));
+	window->setPosition(Vector2i(280, 15));
 	window->setLayout(new GroupLayout);
 
 	new Label(window, "Information", "sans-bold");
@@ -216,18 +222,11 @@ void Viewer::drawContents() {
 		nvgTextAlign(mNVGContext, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		const MatrixXf &V = mMesh.V();
 		const MatrixXu &F = mMesh.F();
-//		const MatrixXu &P = ;
-//		const MatrixXu &N = mMesh.N(); // can calculate outside once and use here
+		const MatrixXu &P = splitPattern;
 		nvgFillColor(mNVGContext, Color(200, 200, 255, 200));
 
 		for (uint32_t f = offset; f < offset + count; ++f) {
 			Vector3f points[3] = { V.col(F(0, f)), V.col(F(1, f)), V.col(F(2, f)) };
-			Vector3f fn = Vector3f::Zero();
-			Vector3f d0 = points[1] - points[0],
-				d1 = points[2] - points[0];
-
-			fn = d0.cross(d1);
-			fn /= fn.norm();	// be careful if fn.norm is close to zero
 
 			for (int i = 0; i < 3; ++i) {
 				int j = (i == 2 ? 0 : i + 1);
@@ -238,9 +237,14 @@ void Viewer::drawContents() {
 				pos << (wi*points[i] + wj*points[j] + wk*points[k]).cast<float>(), 1.0f;
 				Eigen::Vector3f coord = project(Vector3f((model * pos).head<3>()), view, proj, mSize);
 
+				// TODO: Set different colors for "R" and "N", but it may be inefficient to add nvgFillColor in below loop?
 				std::string patternLabel = "N";
-//				patternLabel = (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(P(i, f))) ? "R" : patternLabel;
-//				patternLabel = (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(P(i, f))) ? "F" : patternLabel;
+				if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(P(i, f))) {
+					patternLabel = "R";
+				}
+				else if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(P(i, f))) {
+					patternLabel = "F";
+				}
 
 				// ignore occlusion here
 				nvgText(mNVGContext, coord.x(), mSize[1] - coord.y(), patternLabel.c_str(), nullptr);
@@ -252,7 +256,7 @@ void Viewer::drawContents() {
 	uint32_t drawAmount[LayerCount];
 	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
 	drawAmount[OffsetMeshWireFrame] = mOffsetMesh.F().cols();
-	drawAmount[EdgePatternLabel] = mMesh.F().cols();
+	drawAmount[EdgePatternLabel] = splitPattern.cols();
 
 	bool checked[LayerCount];
 	for (int i = 0; i < LayerCount; ++i) {
@@ -277,13 +281,16 @@ void Viewer::drawContents() {
 void Viewer::loadInput(std::string & meshFileName) {
 	MatrixXf V;
 	MatrixXu F;
+	MatrixXf N;	// face normals
 
 	loadObj(meshFileName, F, V);
+	computeFaceNormals(F, V, N);
 	mMeshStats = computeMeshStats(F, V);
 
 	mMesh.free();
 	mMesh.setF(std::move(F));
 	mMesh.setV(std::move(V));
+	mMesh.setN(std::move(N));
 
 	mShader.bind();
 	mShader.uploadAttrib("position", mMesh.V());
@@ -358,4 +365,12 @@ void Viewer::printInformation() {
 	cout << "offset value: " << mOffset << "\n";
 
 	cout << endl;
+}
+
+void Viewer::computeSplittingPattern() {
+	computePrimsSplittingPattern(mMesh.F(), splitPattern);
+}
+
+void Viewer::constructTetrahedra() {
+	// TODO: compute tetrahedra and generate a tetra object(defined later)
 }

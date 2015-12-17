@@ -14,7 +14,7 @@
 #include "normal.h"
 
 void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N) {
-	std::cout << "Computing vertex normals ..." << std::endl;
+	std::cout << "--Computing vertex normals ..." << std::endl;
 	std::cout.flush();
 
 	uint32_t badFaces = 0;
@@ -62,8 +62,24 @@ void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N) {
 		}
 	}
 
-	std::cout << "Done. (";
+	std::cout << "++Computing vertex normals done. (";
 	if (badFaces > 0)
 		std::cout << badFaces << " degenerate faces.";
 	std::cout << ")" << std::endl;
+}
+
+void computeFaceNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N) {
+	N.resize(F.rows(), F.cols());
+	N.setZero();
+
+	uint32_t trianglesCount = F.cols();
+	for (int f = 0; f < trianglesCount; ++f) {
+		Vector3f points[3] = { V.col(F(0, f)), V.col(F(1, f)), V.col(F(2, f)) };
+		Vector3f d0 = points[1] - points[0],
+			d1 = points[2] - points[1];
+		Vector3f n = d0.cross(d1);
+		n /= n.norm();
+
+		N.col(f) = n;
+	}
 }

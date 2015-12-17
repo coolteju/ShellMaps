@@ -20,3 +20,5 @@ using nanogui::MatrixXf;
 using nanogui::Vector3f;
 
 extern void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N);
+
+extern void computeFaceNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N);

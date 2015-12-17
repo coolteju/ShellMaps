@@ -13,4 +13,5 @@ void TriMesh::free() {
 	mF.resize(0, 0);
 	mUV.resize(0, 0);
 	mVN.resize(0, 0);
+	mN.resize(0, 0);
 }

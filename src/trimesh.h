@@ -24,11 +24,14 @@ public:
 	void setV(MatrixXf &&V) { mV = std::move(V); }
 	void setF(MatrixXu &&F) { mF = std::move(F); }
 	void setUV(MatrixXf &&UV) { mUV = std::move(UV); }
+	void setN(MatrixXf &&N) { mN = std::move(mN); }
 
 	inline const MatrixXf& V() const { return mV; }
 	inline const MatrixXu& F() const { return mF; }
+	inline const MatrixXf& N() const { return mN; }
 	inline MatrixXf& V() { return mV; }
 	inline MatrixXu& F() { return mF; }
+	inline MatrixXf& N() { return mN; }
 	
 
 	void free();
@@ -38,6 +41,7 @@ private:
 	MatrixXu mF;			// triangles indices
 	MatrixXf mVN;			// per vertex outer direction vector, computed based on ajacent facets' normals which share the vertex
 	MatrixXf mUV;			// per vertex texcoords
+	MatrixXf mN;			// face normal
 
 //	bool hasVertexNormals;
 };

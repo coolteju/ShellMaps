@@ -23,15 +23,16 @@ protected:
 	void repaint();
 	bool resizeEvent(const Vector2i &size);
 	bool scrollEvent(const Vector2i &p, const Vector2f &rel);
-
-	void loadInput(std::string &meshFileName);
 	void computeCameraMatrices(Matrix4f &model, Matrix4f &view, Matrix4f &proj);
-
-	void generateOffsetMesh();
 	void shareGLBuffers();
-	void setMeshOffset(double offset);
-
 	void printInformation();
+
+	/* helper routines for shell maps */
+	void loadInput(std::string &meshFileName);
+	void setMeshOffset(double offset);
+	void generateOffsetMesh();
+	void computeSplittingPattern();
+	void constructTetrahedra();
 
 protected:
 	struct CameraParameters {
@@ -56,6 +57,7 @@ protected:
 	MeshStats mMeshStats;
 	TriMesh mOffsetMesh;
 	double mOffset;
+	MatrixXu splitPattern;
 
 	/* OpenGL objects */
 	GLShader mShader;

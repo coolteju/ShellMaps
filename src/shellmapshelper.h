@@ -25,4 +25,4 @@ enum SPLIT_PATTERN {
 extern void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P);
 
 /* F: base mesh(face indices), oF: offset mesh, P: prims splitting pattern, T: Tetrahedra to be computed, size will be: [4, F.cols() * 3] */
-extern void constructTetrahera(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T);
+extern void constructTetraheraFromPrims(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T);

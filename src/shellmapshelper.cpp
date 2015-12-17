@@ -16,6 +16,8 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 //	P.setZero();	// Pattern = None
 	memset(P.data(), SPLIT_PATTERN_NONE, P.size() * sizeof(P(0, 0)));
 
+	std::cout << "--Compute prims splitting pattern ..." << std::endl;
+
 	EdgeToAdjacentTrianglesMap adjacentMap;
 	buildEdgeAdjacentTrianglesTable(F, adjacentMap);
 
@@ -121,8 +123,12 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 					}
 				};
 				FillRemainPattern(remain);
+				P(0, f) = patterns[0], P(1, f) = patterns[1], P(2, f) = patterns[2]; 
 			}
 			else {
+				// Firstly assign the inconsistent pattern, and then flip one edge to sovle it.
+				P(0, f) = patterns[0], P(1, f) = patterns[1], P(2, f) = patterns[2];	// three Rs or thee Fs
+
 				// Solve inconsistency, RRR->RRF, FFF->FFR
 				// DFS style to solve it
 				bool *visited = new bool[F.cols()];
@@ -150,7 +156,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 					if (cN > 0) {
 						// Solve it directly, just flip the pattern on free edge
 						if (P(freeEdge, f) == SPLIT_PATTERN_R) P(freeEdge, f) = SPLIT_PATTERN_F;
-						else  P(freeEdge, f) = SPLIT_PATTERN_F;
+						else  P(freeEdge, f) = SPLIT_PATTERN_R;
 
 						return true;
 					}
@@ -184,11 +190,19 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 							}
 						}
 
-						if (freeAdjacentTriangle > 0) {
+						if (freeAdjacentTriangle >= 0) {
 							SPLIT_PATTERN p = static_cast<SPLIT_PATTERN>(P(edgeId, f));
 							SPLIT_PATTERN flip = (p == SPLIT_PATTERN_R ? SPLIT_PATTERN_F : SPLIT_PATTERN_R);
 
 							P(edgeId, f) = static_cast<uint32_t>(flip);
+							if (p == SPLIT_PATTERN_NONE) {
+								std::cerr << "Error: set an edge with pattern None! at adjacent face(" << freeAdjacentTriangle
+									<< ") when deal with face(" << f << ")." << std::endl;
+								std::cout << "Information: ----------------------" << std::endl;
+								std::cout << "edge patterns on face(" << f << ") are: (" << P(0, f) << P(1, f) << P(2, f) << ")." << std::endl;
+								std::cout << "edge patterns on adjacent face(" << freeAdjacentTriangle << ") are: (" << P(0, freeAdjacentTriangle) << P(1, freeAdjacentTriangle) << P(2, freeAdjacentTriangle) << ")." << std::endl;
+								std::cout << "-----------------------------------" << std::endl;
+							}
 							setEdgePattern(freeAdjacentTriangle, F(edgeId, f), F((edgeId == 2 ? 0 : edgeId + 1), f), p);
 
 							return true;
@@ -206,7 +220,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 									setEdgePattern(adjacentTriangles[i], F(i, f), F((i == 2 ? 0 : i + 1), f), p);
 
 									// check if occurs new inconsistency?
-									// it does make new inconsistency, since all possible sovling situations have been considered?!
+									// it does make new inconsistency, since all possible sovling situations have been considered?! ??? really? may cause wrong results!
 									if (solveInconsistencyRecursively(adjacentTriangles[i])) return true;
 									else {
 										P(i, f) = p;
@@ -241,14 +255,19 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 			else if (SPLIT_PATTERN_NONE == edgePatterns[i]) cN++;
 			else {
 				hasUnrecognizedPattern = true;
-				std::cout << "No, edge(" << "i" << ") at face(" << f << ") has unrecognized pattern(" << edgePatterns[i] << ")." << std::endl;
+				std::cout << "No, edge(" << i << ") at face(" << f << ") has unrecognized pattern(" << edgePatterns[i] << ")." << std::endl;
 				break;
 			}
 		}
 		if (hasUnrecognizedPattern) break;
 
 		if (cN > 0) {
-			std::cout << "No, edge(" << "i" << ") at face(" << f << ") has no pattern." << std::endl;
+//			std::cout << "No, edge(" << i << ") at face(" << f << ") has no pattern." << std::endl;
+			std::cout << "No, face(" << f << ") has no pattern on one edge." << std::endl;
+			std::cout << "Information: ------------------" << std::endl;
+			std::cout << "Edge patterns: (" << edgePatterns[0] << "," << edgePatterns[1] << "," << edgePatterns[2] << ")." << std::endl;
+			std::cout << "face points: (" << F(0, f) << "," << F(1, f) << "," << F(2, f) << ")." << std::endl;
+			std::cout << "-------------------------------" << std::endl;
 			break;
 		}
 		else if (cR == 3 || cF == 3) {
@@ -276,9 +295,11 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 		if (hasSamePattern) break;
 	}
 	#endif
+
+	std::cout << "++Compute prims splitting pattern done." << std::endl;
 }
 
-void constructTetrahera(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
+void constructTetraheraFromPrims(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
 	uint32_t trianglesCount = F.cols();
 	T.resize(4, 3 * trianglesCount);
 
