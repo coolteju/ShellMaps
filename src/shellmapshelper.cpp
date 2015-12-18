@@ -220,7 +220,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 									setEdgePattern(adjacentTriangles[i], F(i, f), F((i == 2 ? 0 : i + 1), f), p);
 
 									// check if occurs new inconsistency?
-									// it does make new inconsistency, since all possible sovling situations have been considered?! ??? really? may cause wrong results!
+									// it does make new inconsistency, since all possible sovling situations have been considered?!
 									if (solveInconsistencyRecursively(adjacentTriangles[i])) return true;
 									else {
 										P(i, f) = p;
@@ -241,7 +241,8 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 
 	/* Check if pattern P is consistency */
 	#if 1
-	std::cout << "check if the resulting pattern P is consistency(correct): ";
+	std::cout << "check if the resulting pattern P is consistent(correct): " << std::endl;
+	bool consistent = true;
 	for (uint32_t f = 0; f < trianglesCount; ++f) {
 		SPLIT_PATTERN edgePatterns[3];
 		getTriangleEdgePatterns(f, edgePatterns);
@@ -259,7 +260,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 				break;
 			}
 		}
-		if (hasUnrecognizedPattern) break;
+		if (hasUnrecognizedPattern) { consistent = false; break; }
 
 		if (cN > 0) {
 //			std::cout << "No, edge(" << i << ") at face(" << f << ") has no pattern." << std::endl;
@@ -273,6 +274,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 		else if (cR == 3 || cF == 3) {
 			std::string tmp = (cR == 3 ? "RRR" : "FFF");
 			std::cout << "No, face(" << f << ") has inconsistent pattern(" << tmp << ")."  << std::endl;
+			consistent = false;
 			break;
 		}
 
@@ -292,8 +294,9 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 				break;
 			}
 		}
-		if (hasSamePattern) break;
+		if (hasSamePattern) { consistent = false; break; }
 	}
+	if (consistent) { std::cout << "Yes" << std::endl; }
 	#endif
 
 	std::cout << "++Compute prims splitting pattern done." << std::endl;

@@ -232,7 +232,7 @@ void Viewer::drawContents() {
 				int j = (i == 2 ? 0 : i + 1);
 				int k = (j == 2 ? 0 : j + 1);
 
-				float wk = 0.01f, wj = (1.0f - wk) / 2.0f, wi = wj;
+				const float wk = 0.01f, wj = (1.0f - wk) / 2.0f, wi = wj;
 				Vector4f pos;
 				pos << (wi*points[i] + wj*points[j] + wk*points[k]).cast<float>(), 1.0f;
 				Eigen::Vector3f coord = project(Vector3f((model * pos).head<3>()), view, proj, mSize);

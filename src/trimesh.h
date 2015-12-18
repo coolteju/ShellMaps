@@ -7,14 +7,6 @@ using nanogui::Vector3f;
 using nanogui::MatrixXf;
 using nanogui::MatrixXu;
 
-struct TangentSpace {
-	Vector3f dpdu;
-	Vector3f dpdv;
-
-	inline TangentSpace	() { }
-};
-
-
 class TriMesh {
 public:
 	TriMesh();
