@@ -1,8 +1,8 @@
 #pragma once
 
 #include "mycommon.h"
-#include "normal.h"
-#include "adjacenttriangles.h"
+#include "trimesh.h"
+#include "tetra.h"
 
 using nanogui::MatrixXf;
 using nanogui::MatrixXu;
@@ -24,5 +24,9 @@ enum SPLIT_PATTERN {
 */
 extern void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P);
 
-/* F: base mesh(face indices), oF: offset mesh, P: prims splitting pattern, T: Tetrahedra to be computed, size will be: [4, F.cols() * 3] */
-extern void constructTetraheraFromPrims(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T);
+/* F: base mesh(face indices), oF: offset mesh, P: prims splitting pattern, T: Tetrahedra to be computed, size will be: [4, F.cols() * 3].
+F and oF should not have same elements! A simple choice of oF here is oF += V.cols(), means, final V = V.append(oV) ...? */
+// TODO: put this function as a local function in constructTetrahedronMesh.
+extern void constructTetraheraFromPrimsSimple(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T);
+
+extern void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offsetMesh, const MatrixXu &P, TetrahedronMesh &tetrahedronMesh);

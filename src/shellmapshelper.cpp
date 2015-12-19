@@ -1,4 +1,6 @@
 #include "shellmapshelper.h"
+#include "normal.h"
+#include "adjacenttriangles.h"
 
 void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, MatrixXf &oV, const float offset) {
 	oF = F;
@@ -302,7 +304,7 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	std::cout << "++Compute prims splitting pattern done." << std::endl;
 }
 
-void constructTetraheraFromPrims(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
+void constructTetrahedraFromPrimsSimple(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
 	uint32_t trianglesCount = F.cols();
 	T.resize(4, 3 * trianglesCount);
 
@@ -336,4 +338,47 @@ void constructTetraheraFromPrims(const MatrixXu &F, const MatrixXu &oF, const Ma
 			}
 		}
 	}
+}
+
+void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offsetMesh, const MatrixXu &P, TetrahedronMesh &tetrahedronMesh) {
+	MatrixXu F, T;	// T: tetra
+	MatrixXf V, N, UV, DPDU, DPDV;	// T: tetra
+
+	const MatrixXu &bF = baseMesh.F();
+	const MatrixXu &oF = offsetMesh.F();
+	const MatrixXf &bV = baseMesh.V(), &bN = baseMesh.N(), &bUV2 = baseMesh.UV(), &bDPDU = baseMesh.DPDU(), &bDPDV = baseMesh.DPDV();
+	const MatrixXf &oV = offsetMesh.V(), &oN = offsetMesh.N(), &oUV2 = offsetMesh.UV(), &oDPDU = offsetMesh.DPDU(), &oDPDV = offsetMesh.DPDV();
+
+//	if (bF.cols() < 1) { std::cout << "Base mesh has no faces." << std::endl; }
+//	if (oF.cols() < 1) { oF = bF; } // Why can not use "oF = bF"??
+
+	/* Simple stategy to construct tetrahedron mesh, append the offset mesh's data to base mesh */
+	const uint32_t rows = 3, cols = 2 * bV.cols();	// cols = bV.cols() + oV.cols()
+	const uint32_t halfCols = cols / 2;
+	const uint32_t size = 3 * sizeof(float) * bV.size();
+	const uint32_t offset = 3 * sizeof(float) * bV.size();
+
+	auto createData = [&](MatrixXf &dst, const MatrixXf& b, const MatrixXf &o) {
+		dst.resize(rows, cols);
+		memcpy(dst.data(), b.data(), size);
+		memcpy(dst.data() + offset, o.data(), size);
+	};
+
+	createData(V, bV, oV);
+	createData(N, bN, oN);
+	createData(DPDU, bDPDU, oDPDU);
+	createData(DPDV, bDPDV, oDPDV);
+
+	// Construct 3D UV from 2d mesh texcoords, base mesh: (u,v)->(u,v,0.0), offset mesh: (u,v)->(u,v,1.0)
+	UV.resize(rows, cols);
+	for (uint32_t uv = 0; uv < halfCols; ++uv) { UV.col(uv) << bUV2.col(uv), 0.0f; }
+	for (uint32_t uv = 0; uv < halfCols; ++uv) { UV.col(uv + halfCols) << oUV2.col(uv), 1.0f; }
+
+	// Contruct F
+
+	// TODO:
+	MatrixXu offsetFace;
+//	offsetFace.setConstant(halfCols);
+	MatrixXu newOF = oF + offsetFace;
+
 }

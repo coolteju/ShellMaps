@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mycommon.h"
-#include "tangant.h"
+//#include "tangant.h"
 
 using nanogui::MatrixXu;
 using nanogui::MatrixXf;
@@ -14,7 +14,8 @@ public:
 		mVtxTexcoord.resize(0, 0);
 		mVtxNormal.resize(0, 0);
 		mTetra.resize(0, 0);
-		mVtxTangent = nullptr;
+		mVtxTangentDpdu.resize(0, 0);
+		mVtxTangentDpdv.resize(0, 0);
 	}
 
 	~TetrahedronMesh() {
@@ -23,14 +24,22 @@ public:
 		mVtxTexcoord.resize(0, 0);
 		mVtxNormal.resize(0, 0);
 		mTetra.resize(0, 0);
-		if (mVtxTangent) delete[] mVtxTangent;
+		mVtxTangentDpdu.resize(0, 0);
+		mVtxTangentDpdv.resize(0, 0);
 	}
 
-//	void setTetrahedronMesh(const MatrixXf &vPosition, const MatrixXf &vNormal, const MatrixXf &vTexcoord, const TangentSpace vTangent[], const MatrixXu &tetra);
+	void setTetrahedronMesh(const MatrixXf &vPosition, const MatrixXf &vNormal, const MatrixXf &vTexcoord, const MatrixXf &vDpdu, const MatrixXf &vDpdv, const MatrixXu &tetra) {
+		mVertexCount = vPosition.cols();
+		mTetrahedronCount = tetra.cols();
+
+		mVtxPosition = vPosition, mVtxNormal = vNormal, mVtxTexcoord = vTexcoord;
+		mVtxTangentDpdu = vDpdu, mVtxTangentDpdv = vDpdv;
+		mTetra = tetra;
+	}
 
 protected:
 	uint32_t mVertexCount, mTetrahedronCount;
 	MatrixXf mVtxPosition, mVtxTexcoord, mVtxNormal;
-	TangentSpace *mVtxTangent;
+	MatrixXf mVtxTangentDpdu, mVtxTangentDpdv;
 	MatrixXu mTetra;
 };

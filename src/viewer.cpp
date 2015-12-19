@@ -284,13 +284,13 @@ void Viewer::loadInput(std::string & meshFileName) {
 	MatrixXf N;	// face normals
 
 	loadObj(meshFileName, F, V);
-	computeFaceNormals(F, V, N);
+//	computeFaceNormals(F, V, N);
 	mMeshStats = computeMeshStats(F, V);
 
 	mMesh.free();
 	mMesh.setF(std::move(F));
 	mMesh.setV(std::move(V));
-	mMesh.setN(std::move(N));
+//	mMesh.setN(std::move(N));
 
 	mShader.bind();
 	mShader.uploadAttrib("position", mMesh.V());
