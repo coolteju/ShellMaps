@@ -71,6 +71,12 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		computeSplittingPattern();
 	});
 
+	new Label(window, "construct tetrahedron mesh", "sans-bold");
+	b = new Button(window, "Construct");
+	b->setCallback([&] {
+		constructTetrahedronMesh();
+	});
+
 	/* gui layers */
 	auto layerCB = [&](bool) {
 		repaint();
