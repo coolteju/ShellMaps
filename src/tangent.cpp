@@ -1,6 +1,7 @@
 #include "tangent.h"
 
 void computeVertexTangents(const MatrixXu &F, const MatrixXf &V, const MatrixXf &UV, MatrixXf &DPDU, MatrixXf &DPDV) {
+	std::cout << "--Computing tangent spaces ..." << std::endl;
 	DPDU.resize(V.rows(), V.cols());
 	DPDU.setZero();
 	DPDV.resize(V.rows(), V.cols());
@@ -61,6 +62,7 @@ void computeVertexTangents(const MatrixXu &F, const MatrixXf &V, const MatrixXf 
 			DPDV.col(v) /= norm;
 		}
 	}
+	std::cout << "++Computing tangent spaces done." << std::endl;
 }
 
 void computeFaceTangents(const MatrixXu &F, const MatrixXf &V, const MatrixXf &UV, MatrixXf &DPDU, MatrixXf &DPDV) {

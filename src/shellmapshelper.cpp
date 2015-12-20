@@ -13,6 +13,15 @@ void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, M
 	oV += offset * N;
 }
 
+void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, const MatrixXf &N, MatrixXu &oF, MatrixXf &oV, const float offset) {
+	oF = F;
+	oV = V;
+
+	// N: vertex normals
+	// Warning: ignore self-intersection here!!
+	oV += offset * N;
+}
+
 void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	P.resize(F.rows(), F.cols());
 //	P.setZero();	// Pattern = None
@@ -304,64 +313,42 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	std::cout << "++Compute prims splitting pattern done." << std::endl;
 }
 
-void constructTetrahedraFromPrimsSimple(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
-	uint32_t trianglesCount = F.cols();
-	T.resize(4, 3 * trianglesCount);
-
-	for (uint32_t f = 0; f < trianglesCount; ++f) { // for each trianlge of base mesh, that means, for each prim
-		uint32_t bP[3] = { F(0, f), F(1, f), F(2, f) };
-		uint32_t oP[3] = { oF(0, f), oF(1, f), oF(2, f) };
-		uint32_t p[3] = { P(0, f), P(1, f), P(2, f) };
-
-		/* Construct each of the three tetrahedra in a prism by iterating counter clockwise edge tag and
-		the next counter clockwise edge tag. */
-		for (int i = 0; i < 3; ++i) {
-			int j = (i == 2 ? 0 : i + 1);
-			int k = (j == 2 ? 0 : j + 1);
-			uint32_t t = 3 * f + i;	// tehetradron id
-
-			if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[j])) {
-				T(0, t) = oP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = bP[k];
-			}
-			else if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[j])) {
-				T(0, t) = oP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = oP[k];
-			}
-			else if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[j])) {
-				T(0, t) = bP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = oP[k];
-			}
-			else if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[j])) {
-				T(0, t) = bP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = bP[k];
-			}
-			else {
-				std::cerr << "Invalid prism splitting pattern found." << std::endl;
-				return;
-			}
-		}
-	}
-}
-
 void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offsetMesh, const MatrixXu &P, TetrahedronMesh &tetrahedronMesh) {
 	MatrixXu F, T;	// T: tetra
-	MatrixXf V, N, UV, DPDU, DPDV;	// T: tetra
+	MatrixXf V, N, UV, DPDU, DPDV;
 
 	const MatrixXu &bF = baseMesh.F();
 	const MatrixXu &oF = offsetMesh.F();
 	const MatrixXf &bV = baseMesh.V(), &bN = baseMesh.N(), &bUV2 = baseMesh.UV(), &bDPDU = baseMesh.DPDU(), &bDPDV = baseMesh.DPDV();
 	const MatrixXf &oV = offsetMesh.V(), &oN = offsetMesh.N(), &oUV2 = offsetMesh.UV(), &oDPDU = offsetMesh.DPDU(), &oDPDV = offsetMesh.DPDV();
 
-//	if (bF.cols() < 1) { std::cout << "Base mesh has no faces." << std::endl; }
-//	if (oF.cols() < 1) { oF = bF; } // Why can not use "oF = bF"??
+	assert(bV.cols() != 0);
+	const uint32_t vRows = 3, vCols = bV.cols() * 2, vHalfCols = vCols / 2;
+	assert(bV.rows() == vRows && bV.cols() == vHalfCols);
+	assert(bN.rows() == vRows && bN.cols() == vHalfCols);
+	assert(bUV2.rows() == vRows && bUV2.cols() == vHalfCols);
+	assert(bDPDU.rows() == vRows && bDPDU.cols() == vHalfCols);
+	assert(bDPDV.rows() == vRows && bDPDV.cols() == vHalfCols);
+
+	assert(oV.rows() == vRows && oV.cols() == vHalfCols);
+	assert(oN.rows() == vRows && oN.cols() == vHalfCols);
+	assert(oUV2.rows() == vRows && oUV2.cols() == vHalfCols);
+	assert(oDPDU.rows() == vRows && oDPDU.cols() == vHalfCols);
+	assert(oDPDV.rows() == vRows && oDPDV.cols() == vHalfCols);
+
+	// Also assuming bF and oF have same topology! that is, bF = oF
+	assert(bF.rows() == 3 && oF.rows() == 3);
+	assert(bF.cols() != 0 && bF.cols() == oF.cols());
 
 	/* Simple stategy to construct tetrahedron mesh, append the offset mesh's data to base mesh */
-	const uint32_t rows = 3, cols = 2 * bV.cols();	// cols = bV.cols() + oV.cols()
-	const uint32_t halfCols = cols / 2;
-	const uint32_t size = 3 * sizeof(float) * bV.size();
-	const uint32_t offset = 3 * sizeof(float) * bV.size();
+	auto createData = [](MatrixXf &dst, const MatrixXf& b, const MatrixXf &o) {
+		const uint32_t rows = b.rows(), cols = b.cols() + o.cols();
+		const uint32_t sizeB = 3 * sizeof(b(0, 0)) * b.size(),
+			sizeO = 3 * sizeof(o(0, 0)) * o.size();
 
-	auto createData = [&](MatrixXf &dst, const MatrixXf& b, const MatrixXf &o) {
 		dst.resize(rows, cols);
-		memcpy(dst.data(), b.data(), size);
-		memcpy(dst.data() + offset, o.data(), size);
+		memcpy(dst.data(), b.data(), sizeB);
+		memcpy(dst.data() + sizeB, o.data(), sizeO);
 	};
 
 	createData(V, bV, oV);
@@ -370,15 +357,62 @@ void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offs
 	createData(DPDV, bDPDV, oDPDV);
 
 	// Construct 3D UV from 2d mesh texcoords, base mesh: (u,v)->(u,v,0.0), offset mesh: (u,v)->(u,v,1.0)
+	const uint32_t rows = 3, cols = bUV2.cols() + oUV2.cols();
+	const uint32_t halfCols = cols / 2;
+
 	UV.resize(rows, cols);
 	for (uint32_t uv = 0; uv < halfCols; ++uv) { UV.col(uv) << bUV2.col(uv), 0.0f; }
 	for (uint32_t uv = 0; uv < halfCols; ++uv) { UV.col(uv + halfCols) << oUV2.col(uv), 1.0f; }
 
 	// Contruct F
+	MatrixXu newOF;
+	newOF.resize(oF.rows(), oF.cols());
+	newOF.setConstant(halfCols);
+	newOF += oF;
 
-	// TODO:
-	MatrixXu offsetFace;
-//	offsetFace.setConstant(halfCols);
-	MatrixXu newOF = oF + offsetFace;
+	F.resize(3, bF.cols() * 2);
+	memcpy(F.data(), bF.data(), 3 * sizeof(bF(0, 0)) * bF.size());
+	memcpy(F.data() + 3 * sizeof(bF(0, 0)) * bF.size(), newOF.data(), 3 * sizeof(newOF(0, 0)) * newOF.size());
+
+	// Construct tetrahedra indices
+	auto constructTetrahedraFromPrimsSimple = [](const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
+		uint32_t trianglesCount = F.cols();
+		T.resize(4, 3 * trianglesCount);
+
+		for (uint32_t f = 0; f < trianglesCount; ++f) { // for each trianlge of base mesh, that means, for each prim
+			uint32_t bP[3] = { F(0, f), F(1, f), F(2, f) };
+			uint32_t oP[3] = { oF(0, f), oF(1, f), oF(2, f) };
+			uint32_t p[3] = { P(0, f), P(1, f), P(2, f) };
+
+			/* Construct each of the three tetrahedra in a prism by iterating counter clockwise edge tag and
+			the next counter clockwise edge tag. */
+			for (int i = 0; i < 3; ++i) {
+				int j = (i == 2 ? 0 : i + 1);
+				int k = (j == 2 ? 0 : j + 1);
+				uint32_t t = 3 * f + i;	// tehetradron id
+
+				if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[j])) {
+					T(0, t) = oP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = bP[k];
+				}
+				else if (SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[j])) {
+					T(0, t) = oP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = oP[k];
+				}
+				else if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[j])) {
+					T(0, t) = bP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = oP[k];
+				}
+				else if (SPLIT_PATTERN_R == static_cast<SPLIT_PATTERN>(p[i]) && SPLIT_PATTERN_F == static_cast<SPLIT_PATTERN>(p[j])) {
+					T(0, t) = bP[i], T(1, t) = bP[j], T(2, t) = oP[j], T(3, t) = bP[k];
+				}
+				else {
+					std::cerr << "Invalid prism splitting pattern found." << std::endl;
+					return;
+				}
+			}
+		}
+	};
+	constructTetrahedraFromPrimsSimple(bF, newOF, P, T);
+
+	// Construct tetrahedron mesh
+	tetrahedronMesh.setTetrahedronMesh(V, N, UV, DPDU, DPDV, T);
 
 }

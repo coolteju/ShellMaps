@@ -4,7 +4,7 @@
 #include <nanogui\glutil.h>
 #include "trimesh.h"
 #include "meshstats.h"
-#include "shellmapshelper.h"
+#include "tetra.h"
 
 using namespace nanogui;
 
@@ -32,7 +32,7 @@ protected:
 	void setMeshOffset(double offset);
 	void generateOffsetMesh();
 	void computeSplittingPattern();
-	void constructTetrahedra();
+	void constructTetrahedronMesh();
 
 protected:
 	struct CameraParameters {
@@ -58,6 +58,7 @@ protected:
 	TriMesh mOffsetMesh;
 	double mOffset;
 	MatrixXu splitPattern;
+	TetrahedronMesh mShell;
 
 	/* OpenGL objects */
 	GLShader mShader;

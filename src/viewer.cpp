@@ -1,6 +1,9 @@
 #include "viewer.h"
 #include "resources.h"
 #include "meshio.h"
+#include "shellmapshelper.h"
+#include "normal.h"
+#include "tangent.h"
 
 #include <iostream>
 #include <string>
@@ -101,15 +104,6 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		(const char *)shader_simple_vert,
 		(const char *)shader_simple_frag);
 
-	// tmp test
-	/*
-	Vector3f p0(0.0f, 0.0f, 0.0f);
-	Vector3f p1(1.0f, 0.0f, 0.0f);
-	Vector3f p2(0.0f, 1.0f, 0.0f);
-
-	float fa = 0.5f * (p1 - p0).cross(p2 - p1).norm();
-	cout << fa << endl;
-*/
 }
 
 Viewer::~Viewer() {
@@ -278,31 +272,6 @@ void Viewer::drawContents() {
 	}
 }
 
-void Viewer::loadInput(std::string & meshFileName) {
-	MatrixXf V;
-	MatrixXu F;
-	MatrixXf N;	// face normals
-
-	loadObj(meshFileName, F, V);
-//	computeFaceNormals(F, V, N);
-	mMeshStats = computeMeshStats(F, V);
-
-	mMesh.free();
-	mMesh.setF(std::move(F));
-	mMesh.setV(std::move(V));
-//	mMesh.setN(std::move(N));
-
-	mShader.bind();
-	mShader.uploadAttrib("position", mMesh.V());
-	mShader.uploadIndices(mMesh.F());
-
-	mCamera.modelTranslation = -mMeshStats.mWeightedCenter.cast<float>();
-	mCamera.modelZoom = 3.0f / (mMeshStats.mAABB.max - mMeshStats.mAABB.min).cwiseAbs().maxCoeff();
-
-	// Initialize offset
-	setMeshOffset(mMeshStats.mAverageEdgeLength);
-}
-
 void Viewer::computeCameraMatrices(Matrix4f & model, Matrix4f & view, Matrix4f & proj) {
 	view = lookAt(mCamera.eye, mCamera.center, mCamera.up);
 	float fH = std::tan(mCamera.viewAngle / 360.0f * M_PI) * mCamera.dnear;
@@ -314,42 +283,9 @@ void Viewer::computeCameraMatrices(Matrix4f & model, Matrix4f & view, Matrix4f &
 	model = translate(model, mCamera.modelTranslation);
 }
 
-void Viewer::generateOffsetMesh() {
-	MatrixXf oV;
-	MatrixXu oF;
-	float offset = (mOffset >= 0.0f ? mOffset : 0.0f);
-
-	generateOffsetSurface(mMesh.F(), mMesh.V(), oF, oV, offset);
-
-	mOffsetMesh.free();
-	mOffsetMesh.setF(std::move(oF));	// same with base mesh
-	mOffsetMesh.setV(std::move(oV));
-
-	mOffsetShader.bind();
-	mOffsetShader.uploadAttrib("position", mOffsetMesh.V());
-//	mOffsetShader.uploadIndices(mOffsetMesh.F());
-
-	// share indices
-	shareGLBuffers();
-}
-
 void Viewer::shareGLBuffers() {
 	mOffsetShader.bind();
 	mOffsetShader.shareAttrib(mShader, "indices");
-}
-
-void Viewer::setMeshOffset(double offset) {
-	char tmp[10];
-	snprintf(tmp, sizeof(tmp), "%.3f", offset);
-
-	double value = std::log(offset);
-	double min = std::log(1e-5f);
-	double max = std::log(5 * mMeshStats.mMaximumEdgeLength);
-
-	mOffsetSlider->setValue((value - min) / (max - min));
-	mOffsetBox->setValue(tmp);
-
-	mOffset = offset;
 }
 
 void Viewer::printInformation() {
@@ -367,10 +303,89 @@ void Viewer::printInformation() {
 	cout << endl;
 }
 
+void Viewer::loadInput(std::string & meshFileName) {
+	MatrixXf V;
+	MatrixXu F;
+	MatrixXf UV;
+	MatrixXf N;
+	MatrixXf DPDU, DPDV;
+
+	loadObj(meshFileName, F, V, UV);
+
+	// Compute vertex normals, tangent spaces
+	computeVertexNormals(F, V, N);
+	assert(UV.cols() == V.cols());
+	computeVertexTangents(F, V, UV, DPDU, DPDV);
+
+	mMesh.free();
+	mMesh.setF(std::move(F));
+	mMesh.setV(std::move(V));
+	mMesh.setUV(std::move(UV));
+	mMesh.setN(std::move(N));
+	mMesh.setDPDU(std::move(DPDU));
+	mMesh.setDPDV(std::move(DPDV));
+
+	mShader.bind();
+	mShader.uploadAttrib("position", mMesh.V());
+	mShader.uploadIndices(mMesh.F());
+
+	mMeshStats = computeMeshStats(F, V);
+	mCamera.modelTranslation = -mMeshStats.mWeightedCenter.cast<float>();
+	mCamera.modelZoom = 3.0f / (mMeshStats.mAABB.max - mMeshStats.mAABB.min).cwiseAbs().maxCoeff();
+
+	// Initialize offset
+	setMeshOffset(mMeshStats.mAverageEdgeLength);
+}
+
+void Viewer::setMeshOffset(double offset) {
+	char tmp[10];
+	snprintf(tmp, sizeof(tmp), "%.3f", offset);
+
+	double value = std::log(offset);
+	double min = std::log(1e-5f);
+	double max = std::log(5 * mMeshStats.mMaximumEdgeLength);
+
+	mOffsetSlider->setValue((value - min) / (max - min));
+	mOffsetBox->setValue(tmp);
+
+	mOffset = offset;
+}
+
+void Viewer::generateOffsetMesh() {
+	MatrixXf oV;
+	MatrixXu oF;
+	MatrixXf oUV;
+	MatrixXf oN;
+	MatrixXf oDPDU, oDPDV;
+	float offset = (mOffset >= 0.0f ? mOffset : 0.0f);
+
+	//	generateOffsetSurface(mMesh.F(), mMesh.V(), oF, oV, offset);
+	generateOffsetSurface(mMesh.F(), mMesh.V(), mMesh.N(), oF, oV, offset);
+
+	oUV = mMesh.UV();
+	computeVertexNormals(oF, oV, oN);
+	computeVertexTangents(oF, oV, oUV, oDPDU, oDPDV);
+
+	mOffsetMesh.free();
+	mOffsetMesh.setF(std::move(oF));	// same with base mesh
+	mOffsetMesh.setV(std::move(oV));
+	mOffsetMesh.setUV(std::move(oUV));
+	mOffsetMesh.setN(std::move(oN));
+	mOffsetMesh.setDPDU(std::move(oDPDU));
+	mOffsetMesh.setDPDV(std::move(oDPDV));
+
+	mOffsetShader.bind();
+	mOffsetShader.uploadAttrib("position", mOffsetMesh.V());
+	//	mOffsetShader.uploadIndices(mOffsetMesh.F());
+
+	// share indices
+	shareGLBuffers();
+}
+
 void Viewer::computeSplittingPattern() {
 	computePrimsSplittingPattern(mMesh.F(), splitPattern);
 }
 
-void Viewer::constructTetrahedra() {
-	// TODO: compute tetrahedra and generate a tetra object(defined later)
+void Viewer::constructTetrahedronMesh() {
+	constructTetrahedronMeshSimple(mMesh, mOffsetMesh, splitPattern, mShell);
 }

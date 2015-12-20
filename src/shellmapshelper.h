@@ -8,6 +8,7 @@ using nanogui::MatrixXf;
 using nanogui::MatrixXu;
 
 extern void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, MatrixXf &oV, const float offset);
+extern void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, const MatrixXf &N, MatrixXu &oF, MatrixXf &oV, const float offset);
 
 enum SPLIT_PATTERN {
 	SPLIT_PATTERN_NONE = 0,
@@ -23,10 +24,5 @@ enum SPLIT_PATTERN {
 	P(0, i) = 0: edge0(p0->p1) in triangle i has not assigend a pattern.
 */
 extern void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P);
-
-/* F: base mesh(face indices), oF: offset mesh, P: prims splitting pattern, T: Tetrahedra to be computed, size will be: [4, F.cols() * 3].
-F and oF should not have same elements! A simple choice of oF here is oF += V.cols(), means, final V = V.append(oV) ...? */
-// TODO: put this function as a local function in constructTetrahedronMesh.
-extern void constructTetraheraFromPrimsSimple(const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T);
 
 extern void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offsetMesh, const MatrixXu &P, TetrahedronMesh &tetrahedronMesh);
