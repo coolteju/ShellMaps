@@ -314,8 +314,9 @@ void Viewer::loadInput(std::string & meshFileName) {
 
 	// Compute vertex normals, tangent spaces
 	computeVertexNormals(F, V, N);
-	assert(UV.cols() == V.cols());
-	computeVertexTangents(F, V, UV, DPDU, DPDV);
+	// TODO: uncomment following two lines to support UV
+//	assert(UV.cols() == V.cols());
+//	computeVertexTangents(F, V, UV, DPDU, DPDV);
 
 	mMesh.free();
 	mMesh.setF(std::move(F));
@@ -362,17 +363,20 @@ void Viewer::generateOffsetMesh() {
 	//	generateOffsetSurface(mMesh.F(), mMesh.V(), oF, oV, offset);
 	generateOffsetSurface(mMesh.F(), mMesh.V(), mMesh.N(), oF, oV, offset);
 
-	oUV = mMesh.UV();
-	computeVertexNormals(oF, oV, oN);
-	computeVertexTangents(oF, oV, oUV, oDPDU, oDPDV);
+//	oUV = mMesh.UV();
+//	computeVertexNormals(oF, oV, oN);
+//	oN = mMesh.N();
+//	computeVertexTangents(oF, oV, oUV, oDPDU, oDPDV);
+//	oDPDU = mMesh.DPDU;
+//	oDPDV = mMesh.DPDV;
 
 	mOffsetMesh.free();
 	mOffsetMesh.setF(std::move(oF));	// same with base mesh
 	mOffsetMesh.setV(std::move(oV));
-	mOffsetMesh.setUV(std::move(oUV));
-	mOffsetMesh.setN(std::move(oN));
-	mOffsetMesh.setDPDU(std::move(oDPDU));
-	mOffsetMesh.setDPDV(std::move(oDPDV));
+//	mOffsetMesh.setUV(std::move(oUV));
+//	mOffsetMesh.setN(std::move(oN));
+//	mOffsetMesh.setDPDU(std::move(oDPDU));
+//	mOffsetMesh.setDPDV(std::move(oDPDV));
 
 	mOffsetShader.bind();
 	mOffsetShader.uploadAttrib("position", mOffsetMesh.V());
@@ -387,5 +391,7 @@ void Viewer::computeSplittingPattern() {
 }
 
 void Viewer::constructTetrahedronMesh() {
-	constructTetrahedronMeshSimple(mMesh, mOffsetMesh, splitPattern, mShell);
+//	constructTetrahedronMeshSimple(mMesh, mOffsetMesh, splitPattern, mShell);
+	constructTetrahedronMeshSimple(mMesh.F(), mMesh.V(), mOffsetMesh.V(),
+		mMesh.UV(), mMesh.N(), mMesh.DPDU(), mMesh.DPDV(), splitPattern, mShell);
 }

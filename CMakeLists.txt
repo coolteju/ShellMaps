@@ -266,6 +266,7 @@ if(NANOGUI_BUILD_EXAMPLE)
 	src/adjacenttriangles.h src/adjacenttriangles.cpp
 	src/tetra.h
 	src/tangent.h src/tangent.cpp
+	resources.h resources.cpp
   )
   target_link_libraries(example1 nanogui ${NANOGUI_EXTRA_LIBS})
   target_link_libraries(example2 nanogui ${NANOGUI_EXTRA_LIBS})

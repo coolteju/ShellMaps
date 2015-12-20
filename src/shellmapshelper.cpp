@@ -313,68 +313,38 @@ void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
 	std::cout << "++Compute prims splitting pattern done." << std::endl;
 }
 
-void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offsetMesh, const MatrixXu &P, TetrahedronMesh &tetrahedronMesh) {
+void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, const MatrixXf &oV,
+	const MatrixXf &bUV, const MatrixXf &bN, const MatrixXf &bDPDU, const MatrixXf &bDPDV,
+	const MatrixXu &P, TetrahedronMesh &tetrahedronMesh) {
 	MatrixXu F, T;	// T: tetra
 	MatrixXf V, N, UV, DPDU, DPDV;
 
-	const MatrixXu &bF = baseMesh.F();
-	const MatrixXu &oF = offsetMesh.F();
-	const MatrixXf &bV = baseMesh.V(), &bN = baseMesh.N(), &bUV2 = baseMesh.UV(), &bDPDU = baseMesh.DPDU(), &bDPDV = baseMesh.DPDV();
-	const MatrixXf &oV = offsetMesh.V(), &oN = offsetMesh.N(), &oUV2 = offsetMesh.UV(), &oDPDU = offsetMesh.DPDU(), &oDPDV = offsetMesh.DPDV();
+	MatrixXu oF;
+	oF.resize(bF.rows(), bF.cols());
+	oF.setConstant(bV.cols());
+	oF += bF;
 
-	assert(bV.cols() != 0);
-	const uint32_t vRows = 3, vCols = bV.cols() * 2, vHalfCols = vCols / 2;
-	assert(bV.rows() == vRows && bV.cols() == vHalfCols);
-	assert(bN.rows() == vRows && bN.cols() == vHalfCols);
-	assert(bUV2.rows() == vRows && bUV2.cols() == vHalfCols);
-	assert(bDPDU.rows() == vRows && bDPDU.cols() == vHalfCols);
-	assert(bDPDV.rows() == vRows && bDPDV.cols() == vHalfCols);
+	MatrixXf bUV3, oUV3;
+	bUV3.resize(3, bUV.cols());
+	oUV3.resize(3, bUV.cols());
+	for (uint32_t uv = 0; uv < bUV.cols(); ++uv) {
+		bUV3.col(uv) << bUV.col(uv), 0.0f;
+		oUV3.col(uv) << bUV.col(uv), 1.0f;
+	}
 
-	assert(oV.rows() == vRows && oV.cols() == vHalfCols);
-	assert(oN.rows() == vRows && oN.cols() == vHalfCols);
-	assert(oUV2.rows() == vRows && oUV2.cols() == vHalfCols);
-	assert(oDPDU.rows() == vRows && oDPDU.cols() == vHalfCols);
-	assert(oDPDV.rows() == vRows && oDPDV.cols() == vHalfCols);
-
-	// Also assuming bF and oF have same topology! that is, bF = oF
-	assert(bF.rows() == 3 && oF.rows() == 3);
-	assert(bF.cols() != 0 && bF.cols() == oF.cols());
-
-	/* Simple stategy to construct tetrahedron mesh, append the offset mesh's data to base mesh */
-	auto createData = [](MatrixXf &dst, const MatrixXf& b, const MatrixXf &o) {
-		const uint32_t rows = b.rows(), cols = b.cols() + o.cols();
-		const uint32_t sizeB = 3 * sizeof(b(0, 0)) * b.size(),
-			sizeO = 3 * sizeof(o(0, 0)) * o.size();
-
-		dst.resize(rows, cols);
-		memcpy(dst.data(), b.data(), sizeB);
-		memcpy(dst.data() + sizeB, o.data(), sizeO);
+	auto combine = [](MatrixXf &dst, const MatrixXf &b, const MatrixXf &o) {
+		memcpy(dst.data(), b.data(), sizeof(b(0, 0)) * b.size());
+		memcpy(dst.data() + sizeof(b(0, 0)) * b.size(), o.data(), sizeof(o(0, 0)) * o.size());
 	};
 
-	createData(V, bV, oV);
-	createData(N, bN, oN);
-	createData(DPDU, bDPDU, oDPDU);
-	createData(DPDV, bDPDV, oDPDV);
+	memcpy(F.data(), bF.data(), sizeof(bF(0, 0)) * bF.size());
+	memcpy(F.data() + sizeof(bF(0, 0)) * bF.size(), oF.data(), sizeof(oF(0, 0)) * oF.size());
+	combine(V, bV, oV);
+	combine(N, bN, bN);
+	combine(UV, bUV3, oUV3);
+	combine(DPDU, bDPDU, bDPDU);
+	combine(DPDV, bDPDV, bDPDV);
 
-	// Construct 3D UV from 2d mesh texcoords, base mesh: (u,v)->(u,v,0.0), offset mesh: (u,v)->(u,v,1.0)
-	const uint32_t rows = 3, cols = bUV2.cols() + oUV2.cols();
-	const uint32_t halfCols = cols / 2;
-
-	UV.resize(rows, cols);
-	for (uint32_t uv = 0; uv < halfCols; ++uv) { UV.col(uv) << bUV2.col(uv), 0.0f; }
-	for (uint32_t uv = 0; uv < halfCols; ++uv) { UV.col(uv + halfCols) << oUV2.col(uv), 1.0f; }
-
-	// Contruct F
-	MatrixXu newOF;
-	newOF.resize(oF.rows(), oF.cols());
-	newOF.setConstant(halfCols);
-	newOF += oF;
-
-	F.resize(3, bF.cols() * 2);
-	memcpy(F.data(), bF.data(), 3 * sizeof(bF(0, 0)) * bF.size());
-	memcpy(F.data() + 3 * sizeof(bF(0, 0)) * bF.size(), newOF.data(), 3 * sizeof(newOF(0, 0)) * newOF.size());
-
-	// Construct tetrahedra indices
 	auto constructTetrahedraFromPrimsSimple = [](const MatrixXu &F, const MatrixXu &oF, const MatrixXu &P, MatrixXu &T) {
 		uint32_t trianglesCount = F.cols();
 		T.resize(4, 3 * trianglesCount);
@@ -410,9 +380,7 @@ void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offs
 			}
 		}
 	};
-	constructTetrahedraFromPrimsSimple(bF, newOF, P, T);
+	constructTetrahedraFromPrimsSimple(bF, oF, P, T);
 
-	// Construct tetrahedron mesh
 	tetrahedronMesh.setTetrahedronMesh(V, N, UV, DPDU, DPDV, T);
-
 }

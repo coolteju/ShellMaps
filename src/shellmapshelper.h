@@ -25,4 +25,6 @@ enum SPLIT_PATTERN {
 */
 extern void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P);
 
-extern void constructTetrahedronMeshSimple(const TriMesh &baseMesh, const TriMesh &offsetMesh, const MatrixXu &P, TetrahedronMesh &tetrahedronMesh);
+extern void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, const MatrixXf &oV,
+	const MatrixXf &bUV, const MatrixXf &bN, const MatrixXf &bDPDU, const MatrixXf &bDPDV,
+	const MatrixXu &P, TetrahedronMesh &tetrahedronMesh);
