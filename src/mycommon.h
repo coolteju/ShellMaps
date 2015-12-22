@@ -10,7 +10,7 @@
 
 using nanogui::Vector3f;
 
-typedef Eigen::Matrix<uint32_t, 1, 1> Vector3u;
+typedef Eigen::Matrix<uint32_t, 3, 1> Vector3u;
 
 template <typename TimeT = std::chrono::milliseconds> class Timer {
 public:
