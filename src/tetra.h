@@ -28,13 +28,13 @@ public:
 		mVtxTangentDpdv.resize(0, 0);
 	}
 
-	void setTetrahedronMesh(const MatrixXf &vPosition, const MatrixXf &vNormal, const MatrixXf &vTexcoord, const MatrixXf &vDpdu, const MatrixXf &vDpdv, const MatrixXu &tetra) {
-		mVertexCount = vPosition.cols();
-		mTetrahedronCount = tetra.cols();
+	void setTetrahedronMesh(MatrixXf &&V, MatrixXf &&N, MatrixXf &&UV, MatrixXf &&DPDU, MatrixXf &&DPDV, MatrixXu &&T) {
+		mVertexCount = V.cols();
+		mTetrahedronCount = T.cols();
 
-		mVtxPosition = vPosition, mVtxNormal = vNormal, mVtxTexcoord = vTexcoord;
-		mVtxTangentDpdu = vDpdu, mVtxTangentDpdv = vDpdv;
-		mTetra = tetra;
+		mVtxPosition = std::move(V), mVtxNormal = std::move(N), mVtxTexcoord = std::move(UV);
+		mVtxTangentDpdu = std::move(DPDU), mVtxTangentDpdv = std::move(DPDV);
+		mTetra = std::move(T);
 	}
 
 protected:

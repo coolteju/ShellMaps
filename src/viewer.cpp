@@ -327,9 +327,7 @@ void Viewer::loadInput(std::string & meshFileName) {
 
 	// Compute vertex normals, tangent spaces
 	computeVertexNormals(F, V, N);
-	// TODO: uncomment following two lines to support UV
-//	assert(UV.cols() == V.cols());
-//	computeVertexTangents(F, V, UV, DPDU, DPDV);
+	computeVertexTangents(F, V, UV, DPDU, DPDV);
 
 	mMesh.free();
 	mMesh.setF(std::move(F));

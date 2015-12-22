@@ -319,6 +319,8 @@ void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, cons
 	MatrixXu F, T;	// T: tetra
 	MatrixXf V, N, UV, DPDU, DPDV;
 
+	std::cout << "--Construct tetrahedron mesh ..." << std::endl;
+
 	MatrixXu oF;
 	oF.resize(bF.rows(), bF.cols());
 	oF.setConstant(bV.cols());
@@ -333,12 +335,14 @@ void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, cons
 	}
 
 	auto combine = [](MatrixXf &dst, const MatrixXf &b, const MatrixXf &o) {
+		dst.resize(b.rows(), b.cols() + o.cols());
 		memcpy(dst.data(), b.data(), sizeof(b(0, 0)) * b.size());
-		memcpy(dst.data() + sizeof(b(0, 0)) * b.size(), o.data(), sizeof(o(0, 0)) * o.size());
+		memcpy(reinterpret_cast<uint8_t *>(dst.data()) + sizeof(float) * b.size(), o.data(), sizeof(float) * o.size());
 	};
 
-	memcpy(F.data(), bF.data(), sizeof(bF(0, 0)) * bF.size());
-	memcpy(F.data() + sizeof(bF(0, 0)) * bF.size(), oF.data(), sizeof(oF(0, 0)) * oF.size());
+	F.resize(bF.rows(), bF.cols() + oF.cols());
+	memcpy(F.data(), bF.data(), sizeof(uint32_t) * bF.size());
+	memcpy(reinterpret_cast<uint8_t *>(F.data()) + sizeof(uint32_t) * bF.size(), oF.data(), sizeof(uint32_t) * oF.size());
 	combine(V, bV, oV);
 	combine(N, bN, bN);
 	combine(UV, bUV3, oUV3);
@@ -382,5 +386,6 @@ void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, cons
 	};
 	constructTetrahedraFromPrimsSimple(bF, oF, P, T);
 
-	tetrahedronMesh.setTetrahedronMesh(V, N, UV, DPDU, DPDV, T);
+	tetrahedronMesh.setTetrahedronMesh(std::move(V), std::move(N), std::move(UV), std::move(DPDU), std::move(DPDV), std::move(T));
+	std::cout << "++Construct tetrahedron mesh done." << std::endl;
 }
