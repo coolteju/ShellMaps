@@ -297,7 +297,12 @@ void Viewer::shareGLBuffers() {
 void Viewer::printInformation() {
 	cout << "Base mesh:" << "\n";
 	cout << "Vertex count: " << mMesh.V().cols() << "\n";
+	cout << mMesh.V().col(0) << endl;
 	cout << "Triangles: " << mMesh.F().cols() << "\n";
+	cout << mMesh.F().col(0) << endl;
+	cout << mMesh.F().maxCoeff() << endl;
+	cout << "UV count:  " << mMesh.UV().cols() << "\n";
+	cout << mMesh.UV().col(0) << endl;
 	cout << "minEdgeLenth, maxEdgeLength, avgEdgeLength: " << mMeshStats.mMinimumEdgeLength << ", "
 		<< mMeshStats.mMaximumEdgeLength << ", "
 		<< mMeshStats.mAverageEdgeLength << "\n";
@@ -316,7 +321,9 @@ void Viewer::loadInput(std::string & meshFileName) {
 	MatrixXf N;
 	MatrixXf DPDU, DPDV;
 
-	loadObj(meshFileName, F, V, UV);
+//	loadObj1(meshFileName, F, V, UV);
+//	load_obj(meshFileName, F, V);
+	loadObjShareVertexNotShareTexcoord(meshFileName, F, V, UV);
 
 	// Compute vertex normals, tangent spaces
 	computeVertexNormals(F, V, N);
