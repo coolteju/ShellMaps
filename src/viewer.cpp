@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string>
+#include <iomanip>
 
 using std::cout;
 using std::endl;
@@ -23,6 +24,15 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	b->setCallback([&] {
 		std::string meshFileName = file_dialog({ {"obj", "..."}, }, false);
 		loadInput(meshFileName);
+		updateMesh();
+	});
+
+	b = new Button(window, "Flip");
+	b->setCallback([&] {
+		for (uint32_t f = 0; f < inF.cols(); f++) {
+			std::swap(inF(0, f), inF(1, f));
+		}
+		updateMesh();
 	});
 
 	/* offset panel */
@@ -77,6 +87,8 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		constructTetrahedronMesh();
 	});
 
+	/// TODO: add save shell and bounds panel
+
 	/* gui layers */
 	auto layerCB = [&](bool) {
 		repaint();
@@ -85,6 +97,8 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	new Label(window, "Select render layers", "sans-bold");
 	mLayers[InputMeshWireFrame] = new CheckBox(window, "Input Mesh Wireframe", layerCB);
 	mLayers[InputMeshWireFrame]->setChecked(true);
+	mLayers[FaceLabel] = new CheckBox(window, "Face label", layerCB);
+	mLayers[VertexLabel] = new CheckBox(window, "Vertex label", layerCB);
 	mLayers[OffsetMeshWireFrame] = new CheckBox(window, "Offset Mesh Wireframe", layerCB);
 	mLayers[EdgePatternLabel] = new CheckBox(window, "Split Pattern Label on Base Mesh", layerCB);
 
@@ -214,6 +228,43 @@ void Viewer::drawContents() {
 		mOffsetShader.drawIndexed(GL_TRIANGLES, offset, count);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	};
+	
+	drawFunctor[FaceLabel] = [&](uint32_t offset, uint32_t count) {
+		nvgBeginFrame(mNVGContext, mSize[0], mSize[1], mPixelRatio);
+		nvgFontSize(mNVGContext, 14.0f);
+		nvgFontFace(mNVGContext, "sans-bold");
+		nvgTextAlign(mNVGContext, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+		const MatrixXf &V = mMesh.V();
+		const MatrixXu &F = mMesh.F();
+		nvgFillColor(mNVGContext, Color(200, 200, 255, 200));
+
+		for (uint32_t i = offset; i<offset + count; ++i) {
+			Vector4f pos;
+			pos << (1.0f / 3.0f) * (V.col(F(0, i)) + V.col(F(1, i)) +
+				V.col(F(2, i))).cast<float>(), 1.0f;
+
+			Eigen::Vector3f coord = project(Vector3f((model * pos).head<3>()), view, proj, mSize);
+			nvgText(mNVGContext, coord.x(), mSize[1] - coord.y(), std::to_string(i).c_str(), nullptr);
+		}
+		nvgEndFrame(mNVGContext);
+	};
+
+	drawFunctor[VertexLabel] = [&](uint32_t offset, uint32_t count) {
+		nvgBeginFrame(mNVGContext, mSize[0], mSize[1], mPixelRatio);
+		nvgFontSize(mNVGContext, 14.0f);
+		nvgFontFace(mNVGContext, "sans-bold");
+		nvgTextAlign(mNVGContext, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+		const MatrixXf &V = mMesh.V();
+		nvgFillColor(mNVGContext, Color(200, 255, 200, 200));
+		for (uint32_t i = offset; i<offset + count; ++i) {
+			Vector4f pos;
+			pos << V.col(i).cast<float>(), 1.0f;
+
+			Eigen::Vector3f coord = project(Vector3f((model * pos).head<3>()), view, proj, mSize);
+			nvgText(mNVGContext, coord.x(), mSize[1] - coord.y(), std::to_string(i).c_str(), nullptr);
+		}
+		nvgEndFrame(mNVGContext);
+	};
 
 	drawFunctor[EdgePatternLabel] = [&](uint32_t offset, uint32_t count) {
 		nvgBeginFrame(mNVGContext, mSize[0], mSize[1], mPixelRatio);
@@ -256,6 +307,8 @@ void Viewer::drawContents() {
 	uint32_t drawAmount[LayerCount];
 	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
 	drawAmount[OffsetMeshWireFrame] = mOffsetMesh.F().cols();
+	drawAmount[FaceLabel] = mMesh.F().cols();
+	drawAmount[VertexLabel] = mMesh.V().cols();
 	drawAmount[EdgePatternLabel] = splitPattern.cols();
 
 	bool checked[LayerCount];
@@ -266,6 +319,8 @@ void Viewer::drawContents() {
 	const int drawOrder[] = {
 		InputMeshWireFrame,
 		OffsetMeshWireFrame,
+		FaceLabel,
+		VertexLabel,
 		EdgePatternLabel
 	};
 
@@ -297,12 +352,8 @@ void Viewer::shareGLBuffers() {
 void Viewer::printInformation() {
 	cout << "Base mesh:" << "\n";
 	cout << "Vertex count: " << mMesh.V().cols() << "\n";
-	cout << mMesh.V().col(0) << endl;
 	cout << "Triangles: " << mMesh.F().cols() << "\n";
-	cout << mMesh.F().col(0) << endl;
-	cout << mMesh.F().maxCoeff() << endl;
 	cout << "UV count:  " << mMesh.UV().cols() << "\n";
-	cout << mMesh.UV().col(0) << endl;
 	cout << "minEdgeLenth, maxEdgeLength, avgEdgeLength: " << mMeshStats.mMinimumEdgeLength << ", "
 		<< mMeshStats.mMaximumEdgeLength << ", "
 		<< mMeshStats.mAverageEdgeLength << "\n";
@@ -311,38 +362,45 @@ void Viewer::printInformation() {
 	cout << "Offset:" << "\n";
 	cout << "offset value: " << mOffset << "\n";
 
-	cout << "---------Normals-----" << "\n";
-	cout << mMesh.N().col(0) << endl;
-//	cout << mMesh.N().col(1) << endl;
+	cout << "---------Vertex Infor-----" << "\n";
+	uint32_t list[] = { 0, 1, 2 };
 
-	cout << "---------Tangents-----" << "\n";
-	cout << mMesh.DPDU().col(0) << endl;
-	cout << mMesh.DPDV().col(0) << endl;
-//	cout << mMesh.DPDU().col(1) << endl;
-//	cout << mMesh.DPDV().col(1) << endl;
+	cout << setprecision(7);
+
+	for (auto v : list) {
+		cout << "||||||||||||||||||" << endl;
+		std::cout << "vertex id: " << v << endl;
+		cout << "pos: " << mMesh.V()(0, v) << " " << mMesh.V()(1, v) << " " << mMesh.V()(2, v) << endl;
+		cout << "uv:  " << mMesh.UV()(0, v) << " " << mMesh.UV()(1, v) << endl;
+		cout << "n:   " << mMesh.N()(0, v) << " " << mMesh.N()(1, v) << " " << mMesh.N()(2, v) << endl;
+		cout << "dpdu:" << mMesh.DPDU()(0, v) << " " << mMesh.DPDU()(1, v) << " " << mMesh.DPDU()(2, v) << endl;
+		cout << "dpdu:" << mMesh.DPDV()(0, v) << " " << mMesh.DPDV()(1, v) << " " << mMesh.DPDV()(2, v) << endl;
+	//	cout << "off: " << mOffsetMesh.V()(0, v) << " " << mOffsetMesh.V()(1, v) << " " << mOffsetMesh.V()(2, v) << endl;
+		cout << "||||||||||||||||||\n" << endl;
+	}
+	cout << "------------------------------" << endl;
 
 	cout << endl;
 }
 
 void Viewer::loadInput(std::string & meshFileName) {
-	MatrixXf V;
-	MatrixXu F;
-	MatrixXf UV;
-	MatrixXf N;
-	MatrixXf DPDU, DPDV;
+	inF.resize(0, 0);
+	inV.resize(0, 0);
+	inUV.resize(0, 0);
 
-//	loadObj1(meshFileName, F, V, UV);
-//	load_obj(meshFileName, F, V);
-	loadObjShareVertexNotShareTexcoord(meshFileName, F, V, UV);
+	loadObjShareVertexNotShareTexcoord(meshFileName, inF, inV, inUV);
+}
 
-	// Compute vertex normals, tangent spaces
-	computeVertexNormals(F, V, N);
-	computeVertexTangents(F, V, UV, DPDU, DPDV);
+void Viewer::updateMesh() {
+	MatrixXf N, DPDU, DPDV;
+
+	computeVertexNormals(inF, inV, N, false);
+	computeVertexTangents(inF, inV, inUV, DPDU, DPDV, false);
 
 	mMesh.free();
-	mMesh.setF(std::move(F));
-	mMesh.setV(std::move(V));
-	mMesh.setUV(std::move(UV));
+	mMesh.setF(std::move(inF));
+	mMesh.setV(std::move(inV));
+	mMesh.setUV(std::move(inUV));
 	mMesh.setN(std::move(N));
 	mMesh.setDPDU(std::move(DPDU));
 	mMesh.setDPDV(std::move(DPDV));
@@ -351,7 +409,7 @@ void Viewer::loadInput(std::string & meshFileName) {
 	mShader.uploadAttrib("position", mMesh.V());
 	mShader.uploadIndices(mMesh.F());
 
-	mMeshStats = computeMeshStats(F, V);
+	mMeshStats = computeMeshStats(mMesh.F(), mMesh.V());
 	mCamera.modelTranslation = -mMeshStats.mWeightedCenter.cast<float>();
 	mCamera.modelZoom = 3.0f / (mMeshStats.mAABB.max - mMeshStats.mAABB.min).cwiseAbs().maxCoeff();
 
@@ -384,20 +442,9 @@ void Viewer::generateOffsetMesh() {
 	//	generateOffsetSurface(mMesh.F(), mMesh.V(), oF, oV, offset);
 	generateOffsetSurface(mMesh.F(), mMesh.V(), mMesh.N(), oF, oV, offset);
 
-//	oUV = mMesh.UV();
-//	computeVertexNormals(oF, oV, oN);
-//	oN = mMesh.N();
-//	computeVertexTangents(oF, oV, oUV, oDPDU, oDPDV);
-//	oDPDU = mMesh.DPDU;
-//	oDPDV = mMesh.DPDV;
-
 	mOffsetMesh.free();
 	mOffsetMesh.setF(std::move(oF));	// same with base mesh
 	mOffsetMesh.setV(std::move(oV));
-//	mOffsetMesh.setUV(std::move(oUV));
-//	mOffsetMesh.setN(std::move(oN));
-//	mOffsetMesh.setDPDU(std::move(oDPDU));
-//	mOffsetMesh.setDPDV(std::move(oDPDV));
 
 	mOffsetShader.bind();
 	mOffsetShader.uploadAttrib("position", mOffsetMesh.V());
@@ -412,7 +459,6 @@ void Viewer::computeSplittingPattern() {
 }
 
 void Viewer::constructTetrahedronMesh() {
-//	constructTetrahedronMeshSimple(mMesh, mOffsetMesh, splitPattern, mShell);
 	constructTetrahedronMeshSimple(mMesh.F(), mMesh.V(), mOffsetMesh.V(),
 		mMesh.UV(), mMesh.N(), mMesh.DPDU(), mMesh.DPDV(), splitPattern, mShell);
 }

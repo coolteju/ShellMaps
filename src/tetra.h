@@ -37,6 +37,17 @@ public:
 		mTetra = std::move(T);
 	}
 
+	inline uint32_t getVertexCount() const { return mVertexCount; }
+	inline uint32_t getTetrahedronCount() const { return mTetrahedronCount; }
+
+	inline const MatrixXf& V() const { return mVtxPosition; }
+	inline const MatrixXf& UV() const { return mVtxTexcoord; }
+	inline const MatrixXf& N() const { return mVtxNormal; }
+	inline const MatrixXf& DPDU() const { return mVtxTangentDpdu; }
+	inline const MatrixXf& DPDV() const { return mVtxTangentDpdv; }
+
+	inline const MatrixXu& T() const { return mTetra; }
+
 protected:
 	uint32_t mVertexCount, mTetrahedronCount;
 	MatrixXf mVtxPosition, mVtxTexcoord, mVtxNormal;

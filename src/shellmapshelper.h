@@ -28,3 +28,6 @@ extern void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P);
 extern void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, const MatrixXf &oV,
 	const MatrixXf &bUV, const MatrixXf &bN, const MatrixXf &bDPDU, const MatrixXf &bDPDV,
 	const MatrixXu &P, TetrahedronMesh &tetrahedronMesh);
+
+/* Save tetrahedron mesh to file in mitsuba required format */
+extern void saveShellToMitsuba(const std::string &filename, const TetrahedronMesh &shell);

@@ -13,7 +13,7 @@
 
 #include "normal.h"
 
-void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N) {
+void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N, bool angleWeight) {
 	std::cout << "--Computing vertex normals ..." << std::endl;
 	std::cout.flush();
 
@@ -47,7 +47,8 @@ void computeVertexNormals(const MatrixXu &F, const MatrixXf &V, MatrixXf &N) {
 			/* "Computing Vertex Normals from Polygonal Facets"
 			by Grit Thuermer and Charles A. Wuethrich, JGT 1998, Vol 3 */
 			float angle = fast_acos(d0.dot(d1) / std::sqrt(d0.squaredNorm() * d1.squaredNorm()));
-			N.col(F(i, f)) += fn * angle;
+			if (angleWeight) N.col(F(i, f)) += fn * angle;
+			else N.col(F(i, f)) += fn;
 		}
 	}
 

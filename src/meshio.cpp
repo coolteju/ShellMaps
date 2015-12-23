@@ -37,7 +37,7 @@ void loadObj(const std::string &filename, MatrixXu &F, MatrixXf &V, MatrixXf &UV
 	UV.resize(2, UVSize);
 	memcpy(UV.data(), shape.mesh.texcoords.data(), sizeof(float) * UVSize * 2);
 
-	std::cout << "++Load mesh file done." << std::endl;
+	std::cout << "load mesh done. (V=" << V.cols() << ", F=" << F.cols() << ", UV=" << UV.cols() << std::endl;
 }
 
 void loadObjShareVertexNotShareTexcoord(const std::string &filename, MatrixXu &F, MatrixXf &V, MatrixXf &UV) {

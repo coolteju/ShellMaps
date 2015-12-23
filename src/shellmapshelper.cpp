@@ -389,3 +389,27 @@ void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, cons
 	tetrahedronMesh.setTetrahedronMesh(std::move(V), std::move(N), std::move(UV), std::move(DPDU), std::move(DPDV), std::move(T));
 	std::cout << "++Construct tetrahedron mesh done." << std::endl;
 }
+
+void saveShellToMitsuba(const std::string &filename, const TetrahedronMesh &shell) {
+	FILE *fout = fopen(filename.c_str(), "wt");
+
+	if (fout) {
+		uint32_t vertexCount = shell.getVertexCount(), tetrahedronCount = shell.getTetrahedronCount();
+		const MatrixXf &V = shell.V(), &UV = shell.UV(), &N = shell.N(), &DPDU = shell.DPDU(), &DPDV = shell.DPDV();
+		const MatrixXu &T = shell.T();
+
+		fprintf(fout, "%u %u", vertexCount, tetrahedronCount);
+		uint32_t i;
+		for (i = 0; i < vertexCount; ++i) {
+			fprintf(fout, "%f %f %f\n", V(0, i), V(1, i), V(2, i));
+			fprintf(fout, "%f %f %f\n", UV(0, i), UV(1, i), UV(2, i));
+			fprintf(fout, "%f %f %f\n", N(0, i), N(1, i), N(2, i));
+			fprintf(fout, "%f %f %f %f %f %f\n", DPDU(0, i), DPDU(1, i), DPDU(2, i), DPDV(0, i), DPDV(1, i), DPDV(2, i));
+		}
+		for (i = 0; i < tetrahedronCount; ++i) {
+			fprintf(fout, "%u %u %u %u\n", T(0, i), T(1, i), T(2, i), T(3, i));
+		}
+	}
+
+	fclose(fout);
+}

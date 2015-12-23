@@ -29,6 +29,7 @@ protected:
 
 	/* helper routines for shell maps */
 	void loadInput(std::string &meshFileName);
+	void updateMesh();
 	void setMeshOffset(double offset);
 	void generateOffsetMesh();
 	void computeSplittingPattern();
@@ -53,6 +54,8 @@ protected:
 	Vector2i mTranslateStart;
 
 	/* Data being processing */
+	MatrixXu inF;
+	MatrixXf inV, inUV;
 	TriMesh mMesh;
 	MeshStats mMeshStats;
 	TriMesh mOffsetMesh;
@@ -68,6 +71,8 @@ protected:
 	enum Layers {
 		InputMeshWireFrame,
 		OffsetMeshWireFrame,
+		FaceLabel,
+		VertexLabel,
 		EdgePatternLabel,
 		LayerCount
 	};

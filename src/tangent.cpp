@@ -1,6 +1,6 @@
 #include "tangent.h"
 
-void computeVertexTangents(const MatrixXu &F, const MatrixXf &V, const MatrixXf &UV, MatrixXf &DPDU, MatrixXf &DPDV) {
+void computeVertexTangents(const MatrixXu &F, const MatrixXf &V, const MatrixXf &UV, MatrixXf &DPDU, MatrixXf &DPDV, bool angleWeight) {
 	std::cout << "--Computing tangent spaces ..." << std::endl;
 	DPDU.resize(V.rows(), V.cols());
 	DPDU.setZero();
@@ -38,8 +38,14 @@ void computeVertexTangents(const MatrixXu &F, const MatrixXf &V, const MatrixXf 
 			}
 
 			float angle = fast_acos(dP1.dot(dP2) / std::sqrt(dP1.squaredNorm() * dP2.squaredNorm()));
-			DPDU.col(F(i, f)) += dpdu * angle;
-			DPDV.col(F(i, f)) += dpdv * angle;
+			if (angleWeight) {
+				DPDU.col(F(i, f)) += dpdu * angle;
+				DPDV.col(F(i, f)) += dpdv * angle;
+			}
+			else {
+				DPDU.col(F(i, f)) += dpdu;
+				DPDV.col(F(i, f)) += dpdv;
+			}
 		}
 	}
 
