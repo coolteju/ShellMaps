@@ -311,6 +311,16 @@ void Viewer::printInformation() {
 	cout << "Offset:" << "\n";
 	cout << "offset value: " << mOffset << "\n";
 
+	cout << "---------Normals-----" << "\n";
+	cout << mMesh.N().col(0) << endl;
+//	cout << mMesh.N().col(1) << endl;
+
+	cout << "---------Tangents-----" << "\n";
+	cout << mMesh.DPDU().col(0) << endl;
+	cout << mMesh.DPDV().col(0) << endl;
+//	cout << mMesh.DPDU().col(1) << endl;
+//	cout << mMesh.DPDV().col(1) << endl;
+
 	cout << endl;
 }
 
