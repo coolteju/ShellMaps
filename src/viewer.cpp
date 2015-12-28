@@ -4,6 +4,7 @@
 #include "shellmapshelper.h"
 #include "normal.h"
 #include "tangent.h"
+#include "shellbounds.h"
 
 #include <iostream>
 #include <string>
@@ -88,6 +89,21 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	});
 
 	/// TODO: add save shell and bounds panel
+	new Label(window, "save shell and bounding shape", "sans-bold");
+	b = new Button(window, "Save shell");
+	b->setCallback([&] {
+		string fileName = file_dialog({ {"dat", "..."}, }, true);
+		saveShellToMitsuba(fileName, mShell);
+	});
+
+	b = new Button(window, "Save bound");
+	b->setCallback([&] {
+		string fileName = file_dialog({ {"obj", "Wavefront OBJ" }, }, true);
+		MatrixXu boundF;
+		MatrixXf boundV;
+		generateShellBoundSimple(mMesh.F(), mMesh.V(), mOffsetMesh.V(), boundF, boundV);
+		writeObj(fileName, boundF, boundV);
+	});
 
 	/* gui layers */
 	auto layerCB = [&](bool) {
@@ -307,8 +323,10 @@ void Viewer::drawContents() {
 	uint32_t drawAmount[LayerCount];
 	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
 	drawAmount[OffsetMeshWireFrame] = mOffsetMesh.F().cols();
-	drawAmount[FaceLabel] = mMesh.F().cols();
-	drawAmount[VertexLabel] = mMesh.V().cols();
+//	drawAmount[FaceLabel] = mMesh.F().cols();
+	drawAmount[FaceLabel] = mMesh.F().cols() >= 2 ? 2 : 0;
+//	drawAmount[VertexLabel] = mMesh.V().cols();
+	drawAmount[VertexLabel] = mMesh.V().cols() >= 4 ? 4 : 0;
 	drawAmount[EdgePatternLabel] = splitPattern.cols();
 
 	bool checked[LayerCount];
@@ -394,8 +412,9 @@ void Viewer::loadInput(std::string & meshFileName) {
 void Viewer::updateMesh() {
 	MatrixXf N, DPDU, DPDV;
 
-	computeVertexNormals(inF, inV, N, false);
-	computeVertexTangents(inF, inV, inUV, DPDU, DPDV, false);
+	computeVertexNormals(inF, inV, N, true);
+	if (inUV.cols() > 0)
+		computeVertexTangents(inF, inV, inUV, DPDU, DPDV, true);
 
 	mMesh.free();
 	mMesh.setF(std::move(inF));

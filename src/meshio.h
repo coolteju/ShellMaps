@@ -18,3 +18,5 @@ extern void loadObj(const std::string &filename, MatrixXu &F, MatrixXf &V, Matri
 /* Load mesh which shares vertex and does not share texcoords(but the uv values are same), for example: the meshes in Berkeley Garment Library.
 http://graphics.berkeley.edu/resources/GarmentLibrary/index.html */
 extern void loadObjShareVertexNotShareTexcoord(const std::string &filename, MatrixXu &F, MatrixXf &V, MatrixXf &UV);
+
+extern void writeObj(const std::string filename, const MatrixXu &F, const MatrixXf &V);

@@ -14,12 +14,14 @@ void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, MatrixXu &oF, M
 }
 
 void generateOffsetSurface(const MatrixXu &F, const MatrixXf &V, const MatrixXf &N, MatrixXu &oF, MatrixXf &oV, const float offset) {
+	std::cout << "--Generate offset mesh ..." << std::endl;
 	oF = F;
 	oV = V;
 
 	// N: vertex normals
 	// Warning: ignore self-intersection here!!
 	oV += offset * N;
+	std::cout << "--Generate offset mesh done." << std::endl;
 }
 
 void computePrimsSplittingPattern(const MatrixXu &F, MatrixXu &P) {
@@ -391,6 +393,8 @@ void constructTetrahedronMeshSimple(const MatrixXu &bF, const MatrixXf &bV, cons
 }
 
 void saveShellToMitsuba(const std::string &filename, const TetrahedronMesh &shell) {
+	std::cout << "Writing \"" << filename << "\" (V=" << shell.getVertexCount()
+		<< ", T=" << shell.getTetrahedronCount() << ") ..." << std::endl;
 	FILE *fout = fopen(filename.c_str(), "wt");
 
 	if (fout) {
@@ -398,7 +402,7 @@ void saveShellToMitsuba(const std::string &filename, const TetrahedronMesh &shel
 		const MatrixXf &V = shell.V(), &UV = shell.UV(), &N = shell.N(), &DPDU = shell.DPDU(), &DPDV = shell.DPDV();
 		const MatrixXu &T = shell.T();
 
-		fprintf(fout, "%u %u", vertexCount, tetrahedronCount);
+		fprintf(fout, "%u %u\n", vertexCount, tetrahedronCount);
 		uint32_t i;
 		for (i = 0; i < vertexCount; ++i) {
 			fprintf(fout, "%f %f %f\n", V(0, i), V(1, i), V(2, i));
@@ -412,4 +416,5 @@ void saveShellToMitsuba(const std::string &filename, const TetrahedronMesh &shel
 	}
 
 	fclose(fout);
+	std::cout << "Save shell done." << std::endl;
 }

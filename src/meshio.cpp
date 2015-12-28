@@ -173,3 +173,23 @@ void loadObjShareVertexNotShareTexcoord(const std::string &filename, MatrixXu &F
 	std::cout << "done. (V=" << V.cols() << ", F=" << F.cols() << ", UV=" << UV.cols() << ", took "
 		<< timeString(timer.value()) << ")" << std::endl;
 }
+
+void writeObj(const std::string filename, const MatrixXu &F, const MatrixXf &V) {
+	std::cout << "Writing \"" << filename << "\" (V=" << V.cols()
+		<< ", F" << F.cols() << ") ..." << std::endl;
+	std::ofstream os(filename);
+	if (os.fail()) {
+		throw std::runtime_error("Unable to open OBJ file \"" + filename + "\"!");
+	}
+
+	for (uint32_t v = 0; v < V.cols(); ++v) {
+		os << "v " << V(0, v) << " " << V(1, v) << " " << V(2, v) << std::endl;
+	}
+
+	for (uint32_t f = 0; f < F.cols(); ++f) {
+		os << "f " << F(0, f) + 1 << " " << F(1, f) + 1 << " " << F(2, f) + 1 << std::endl;
+	}
+
+	os.close();
+	std::cout << "done." << std::endl;
+}
