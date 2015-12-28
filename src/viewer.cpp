@@ -31,7 +31,7 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	b = new Button(window, "Flip");
 	b->setCallback([&] {
 		for (uint32_t f = 0; f < inF.cols(); f++) {
-			std::swap(inF(0, f), inF(1, f));
+			std::swap(inF(1, f), inF(2, f));
 		}
 		updateMesh();
 	});
@@ -271,7 +271,7 @@ void Viewer::drawContents() {
 		nvgFontFace(mNVGContext, "sans-bold");
 		nvgTextAlign(mNVGContext, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		const MatrixXf &V = mMesh.V();
-		nvgFillColor(mNVGContext, Color(200, 255, 200, 200));
+		nvgFillColor(mNVGContext, Color(255, 100, 200, 200));
 		for (uint32_t i = offset; i<offset + count; ++i) {
 			Vector4f pos;
 			pos << V.col(i).cast<float>(), 1.0f;
@@ -323,10 +323,8 @@ void Viewer::drawContents() {
 	uint32_t drawAmount[LayerCount];
 	drawAmount[InputMeshWireFrame] = mMesh.F().cols();
 	drawAmount[OffsetMeshWireFrame] = mOffsetMesh.F().cols();
-//	drawAmount[FaceLabel] = mMesh.F().cols();
-	drawAmount[FaceLabel] = mMesh.F().cols() >= 2 ? 2 : 0;
-//	drawAmount[VertexLabel] = mMesh.V().cols();
-	drawAmount[VertexLabel] = mMesh.V().cols() >= 4 ? 4 : 0;
+	drawAmount[FaceLabel] = mMesh.F().cols();
+	drawAmount[VertexLabel] = mMesh.V().cols();
 	drawAmount[EdgePatternLabel] = splitPattern.cols();
 
 	bool checked[LayerCount];
@@ -381,22 +379,25 @@ void Viewer::printInformation() {
 	cout << "offset value: " << mOffset << "\n";
 
 	cout << "---------Vertex Infor-----" << "\n";
-	uint32_t list[] = { 0, 1, 2 };
+	uint32_t list[] = {0, 1, 2 };
 
 	cout << setprecision(7);
 
 	for (auto v : list) {
 		cout << "||||||||||||||||||" << endl;
-		std::cout << "vertex id: " << v << endl;
-		cout << "pos: " << mMesh.V()(0, v) << " " << mMesh.V()(1, v) << " " << mMesh.V()(2, v) << endl;
-		cout << "uv:  " << mMesh.UV()(0, v) << " " << mMesh.UV()(1, v) << endl;
-		cout << "n:   " << mMesh.N()(0, v) << " " << mMesh.N()(1, v) << " " << mMesh.N()(2, v) << endl;
-		cout << "dpdu:" << mMesh.DPDU()(0, v) << " " << mMesh.DPDU()(1, v) << " " << mMesh.DPDU()(2, v) << endl;
-		cout << "dpdu:" << mMesh.DPDV()(0, v) << " " << mMesh.DPDV()(1, v) << " " << mMesh.DPDV()(2, v) << endl;
+//		std::cout << "vertex id: " << v << endl;
+//		cout << "pos: " << mMesh.V()(0, v) << " " << mMesh.V()(1, v) << " " << mMesh.V()(2, v) << endl;
+//		cout << "uv:  " << mMesh.UV()(0, v) << " " << mMesh.UV()(1, v) << endl;
+//		cout << "n:   " << mMesh.N()(0, v) << " " << mMesh.N()(1, v) << " " << mMesh.N()(2, v) << endl;
+//		cout << "dpdu:" << mMesh.DPDU()(0, v) << " " << mMesh.DPDU()(1, v) << " " << mMesh.DPDU()(2, v) << endl;
+//		cout << "dpdu:" << mMesh.DPDV()(0, v) << " " << mMesh.DPDV()(1, v) << " " << mMesh.DPDV()(2, v) << endl;
 	//	cout << "off: " << mOffsetMesh.V()(0, v) << " " << mOffsetMesh.V()(1, v) << " " << mOffsetMesh.V()(2, v) << endl;
 		cout << "||||||||||||||||||\n" << endl;
 	}
 	cout << "------------------------------" << endl;
+
+	cout << "F0: " << mMesh.F().col(0) << endl;
+	cout << "F1: " << mMesh.F().col(1) << endl;
 
 	cout << endl;
 }
