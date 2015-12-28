@@ -396,8 +396,8 @@ void Viewer::printInformation() {
 	}
 	cout << "------------------------------" << endl;
 
-	cout << "F0: " << mMesh.F().col(0) << endl;
-	cout << "F1: " << mMesh.F().col(1) << endl;
+//	cout << "F0: " << mMesh.F().col(0) << endl;
+//	cout << "F1: " << mMesh.F().col(1) << endl;
 
 	cout << endl;
 }
