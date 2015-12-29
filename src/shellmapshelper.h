@@ -1,7 +1,6 @@
 #pragma once
 
 #include "mycommon.h"
-#include "trimesh.h"
 #include "tetra.h"
 
 using nanogui::MatrixXf;

@@ -24,8 +24,10 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 	Button *b = new Button(window, "Open");
 	b->setCallback([&] {
 		std::string meshFileName = file_dialog({ {"obj", "..."}, }, false);
-		loadInput(meshFileName);
-		updateMesh();
+		if (meshFileName.size() > 0) {
+			loadInput(meshFileName);
+			updateMesh();
+		}
 	});
 
 	b = new Button(window, "Flip");

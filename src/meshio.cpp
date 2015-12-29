@@ -176,7 +176,7 @@ void loadObjShareVertexNotShareTexcoord(const std::string &filename, MatrixXu &F
 
 void writeObj(const std::string filename, const MatrixXu &F, const MatrixXf &V) {
 	std::cout << "Writing \"" << filename << "\" (V=" << V.cols()
-		<< ", F" << F.cols() << ") ..." << std::endl;
+		<< ", F=" << F.cols() << ") ..." << std::endl;
 	std::ofstream os(filename);
 	if (os.fail()) {
 		throw std::runtime_error("Unable to open OBJ file \"" + filename + "\"!");
