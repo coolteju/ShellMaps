@@ -410,6 +410,23 @@ void Viewer::loadInput(std::string & meshFileName) {
 	inUV.resize(0, 0);
 
 	loadObjShareVertexNotShareTexcoord(meshFileName, inF, inV, inUV);
+
+	/* check if UV is between [0, 1] */
+	float uvMin = inUV.minCoeff(), uvMax = inUV.maxCoeff();
+	std::cout << "uv is in [" << uvMin << ", " << uvMax << "]." << std::endl;
+	if (uvMin < 0.0f) {
+		if (uvMin >= -1.000001f && uvMax < 1.000001f) {
+			std::cout << "since uv is in [-1, 1], resize to [0, 1]." << std::endl;
+			inUV += MatrixXf::Ones(inUV.rows(), inUV.cols());
+			inUV /= 2.0f;
+		}
+		else {
+			std::cout << "uv is not in [-1, 1], resize [min, max] to [0, 1]." << std::endl;
+			inUV -= MatrixXf::Ones(inUV.rows(), inUV.cols()) * (uvMin - 0.000001);
+			inUV /= (inUV.maxCoeff() + 0.000001);
+		}
+		std::cout << "final uv is in [" << inUV.minCoeff() << ", " << inUV.maxCoeff() << "]." << std::endl;
+	}
 }
 
 void Viewer::updateMesh() {
