@@ -29,19 +29,19 @@ maps has following steps:
 	  in inconsistency between adjacent prims. A DFS style searching is used to solving this.
 
 Finally, a shell map can be generated. There is no well defined format to store this structure
-in original paper. And this implementation save shell maps in the format found in code(src/volume/tetra.h)
+in original paper. And this implementation saves shell maps in the format found in code(src/volume/tetra.h)
 of [ctcloth12](http://www.cs.cornell.edu/projects/ctcloth/data/).
 
 ## Compiling
-You can complile this projcet like that in [nanogui](https://github.com/wjakob/nanogui). Since
+You can compile this project like that in [nanogui](https://github.com/wjakob/nanogui). Since
 nanogui currently works on Mac OS X (Clang) Linux (GCC or Clang) and Windows (Visual Studio ≥ 2015),
 it requires a recent c++11 capable compiler. All dependencies are jointly built using a 
 CMake-based build system.
 
 ## Usage
-![Screenshot](https://github.com/dragonbook/nanogui/raw/master/resources/shellmaps.png "shell maps")
+![Screenshot](https://github.com/dragonbook/nanogui/raw/master/resources/shellmaps.PNG "shell maps")
 
-To get started, lauch the binary and select a .obj file using "Open" button.
+To get started, launch the binary and select a wavefront .obj file using "Open" button.
 
 Then, a simple workflow can be,
 - Set offset value by adjusting slider under "offset value" panel
@@ -51,4 +51,4 @@ Then, a simple workflow can be,
 - Click "Save shell" button to save shell maps in a text file
 - Click "Save bound" button to save the bounding mesh of shell space in a wavefront .obj file
 
-Addtionally, several different rendering layers can be selected for viewing and debugging.
+Additionally, several different rendering layers can be selected for viewing and debugging.
