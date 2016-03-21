@@ -375,6 +375,7 @@ void Viewer::printInformation() {
 	cout << "minEdgeLenth, maxEdgeLength, avgEdgeLength: " << mMeshStats.mMinimumEdgeLength << ", "
 		<< mMeshStats.mMaximumEdgeLength << ", "
 		<< mMeshStats.mAverageEdgeLength << "\n";
+	cout << "surfaceArea: " << mMeshStats.mSurfaceArea << "\n";
 
 	cout << "-------------------" << "\n";
 	cout << "Offset:" << "\n";
@@ -412,23 +413,39 @@ void Viewer::loadInput(std::string & meshFileName) {
 	loadObjShareVertexNotShareTexcoord(meshFileName, inF, inV, inUV);
 
 	/* check if UV is between [0, 1] */
-	// TODO: when the input mesh does not have uv coordinates
+	// TODO: it's better to compute tangents first and then resize uv coordinates.
 	if (inUV.cols() > 0) {
-		float uvMin = inUV.minCoeff(), uvMax = inUV.maxCoeff();
-		std::cout << "uv is in [" << uvMin << ", " << uvMax << "]." << std::endl;
-		if (uvMin < 0.0f) {
-			if (uvMin >= -1.000001f && uvMax < 1.000001f) {
-				std::cout << "since uv is in [-1, 1], resize to [0, 1]." << std::endl;
-				inUV += MatrixXf::Ones(inUV.rows(), inUV.cols());
-				inUV /= 2.0f;
-			}
-			else {
-				std::cout << "uv is not in [-1, 1], resize [min, max] to [0, 1]." << std::endl;
-				inUV -= MatrixXf::Ones(inUV.rows(), inUV.cols()) * (uvMin - 0.000001);
-				inUV /= (inUV.maxCoeff() + 0.000001);
-			}
-			std::cout << "final uv is in [" << inUV.minCoeff() << ", " << inUV.maxCoeff() << "]." << std::endl;
+		float uMin = 1000000.0, vMin = 1000000.0, uMax = -1000000, vMax = -1000000;
+
+		for (int v = 0; v < inUV.cols(); ++v) {
+			if (inUV(0, v) < uMin) uMin = inUV(0, v);
+			if (inUV(0, v) > uMax) uMax = inUV(0, v);
+			if (inUV(1, v) < vMin) vMin = inUV(1, v);
+			if (inUV(1, v) > vMax) vMax = inUV(1, v);
 		}
+
+		std::cout << "[u, v] is between (" << uMin << ", " << vMin << ") and (" << uMax << ", " << vMax << ").\n";
+		std::cout << "first v: " << inUV(0, 0) << ", " << inUV(1, 0) << endl;
+
+		float uR = uMax - uMin;
+		float vR = vMax - vMin;
+
+		float s = std::max(uR, vR);
+		inUV /= s; 
+		float tu = uMin / s;
+		float tv = vMin / s;
+
+		inUV.row(0) -= MatrixXf::Constant(1, inUV.cols(), tu - 0.000001);
+		inUV.row(1) -= MatrixXf::Constant(1, inUV.cols(), tv - 0.000001);
+
+		std::cout << "after, first v: " << inUV(0, 0) << ", " << inUV(1, 0) << endl;
+
+		uMax /= s;
+		uMax -= (tu - 0.000001);
+		vMax /= s;
+		vMax -= (tv - 0.000001);
+
+		std::cout << "after resizing, uv is between (" << 0.0 << ", " << 0.0 << ") and (" << uMax << ", " << vMax << ").\n";
 	}
 }
 
