@@ -30,6 +30,7 @@ protected:
 	/* helper routines for shell maps */
 	void loadInput(std::string &meshFileName);
 	void updateMesh();
+	void resizeUV();
 	void setMeshOffset(double offset);
 	void generateOffsetMesh();
 	void computeSplittingPattern();

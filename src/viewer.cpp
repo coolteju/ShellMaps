@@ -38,6 +38,13 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		updateMesh();
 	});
 
+	b = new Button(window, "ScaleX10");
+	b->setCallback([&] {
+		inV *= 10.0;
+		std::cout << "mesh scale x10!" << std::endl;
+		updateMesh();
+	});
+
 	/* offset panel */
 	new Label(window, "offset value", "sans-bold");
 	Widget *offsetPanel = new Widget(window);
@@ -411,42 +418,6 @@ void Viewer::loadInput(std::string & meshFileName) {
 	inUV.resize(0, 0);
 
 	loadObjShareVertexNotShareTexcoord(meshFileName, inF, inV, inUV);
-
-	/* check if UV is between [0, 1] */
-	// TODO: it's better to compute tangents first and then resize uv coordinates.
-	if (inUV.cols() > 0) {
-		float uMin = 1000000.0, vMin = 1000000.0, uMax = -1000000, vMax = -1000000;
-
-		for (int v = 0; v < inUV.cols(); ++v) {
-			if (inUV(0, v) < uMin) uMin = inUV(0, v);
-			if (inUV(0, v) > uMax) uMax = inUV(0, v);
-			if (inUV(1, v) < vMin) vMin = inUV(1, v);
-			if (inUV(1, v) > vMax) vMax = inUV(1, v);
-		}
-
-		std::cout << "[u, v] is between (" << uMin << ", " << vMin << ") and (" << uMax << ", " << vMax << ").\n";
-		std::cout << "first v: " << inUV(0, 0) << ", " << inUV(1, 0) << endl;
-
-		float uR = uMax - uMin;
-		float vR = vMax - vMin;
-
-		float s = std::max(uR, vR);
-		inUV /= s; 
-		float tu = uMin / s;
-		float tv = vMin / s;
-
-		inUV.row(0) -= MatrixXf::Constant(1, inUV.cols(), tu - 0.000001);
-		inUV.row(1) -= MatrixXf::Constant(1, inUV.cols(), tv - 0.000001);
-
-		std::cout << "after, first v: " << inUV(0, 0) << ", " << inUV(1, 0) << endl;
-
-		uMax /= s;
-		uMax -= (tu - 0.000001);
-		vMax /= s;
-		vMax -= (tv - 0.000001);
-
-		std::cout << "after resizing, uv is between (" << 0.0 << ", " << 0.0 << ") and (" << uMax << ", " << vMax << ").\n";
-	}
 }
 
 void Viewer::updateMesh() {
@@ -454,6 +425,7 @@ void Viewer::updateMesh() {
 
 	computeVertexNormals(inF, inV, N, true);
 	if (inUV.cols() > 0)
+		resizeUV();
 		computeVertexTangents(inF, inV, inUV, DPDU, DPDV, true);
 
 	mMesh.free();
@@ -476,6 +448,48 @@ void Viewer::updateMesh() {
 
 	// Initialize offset
 	setMeshOffset(mMeshStats.mAverageEdgeLength);
+}
+
+void Viewer::resizeUV() {
+	/* check if UV is between [0, 1] */
+	// TODO: it's better to compute tangents first and then resize uv coordinates.
+	if (inUV.cols() > 0) {
+		float uMin = 1000000.0, vMin = 1000000.0, uMax = -1000000, vMax = -1000000;
+
+		for (int v = 0; v < inUV.cols(); ++v) {
+			if (inUV(0, v) < uMin) uMin = inUV(0, v);
+			if (inUV(0, v) > uMax) uMax = inUV(0, v);
+			if (inUV(1, v) < vMin) vMin = inUV(1, v);
+			if (inUV(1, v) > vMax) vMax = inUV(1, v);
+		}
+
+		std::cout << "[u, v] is between (" << uMin << ", " << vMin << ") and (" << uMax << ", " << vMax << ").\n";
+		std::cout << "first v: " << inUV(0, 0) << ", " << inUV(1, 0) << endl;
+
+		if (uMin < 0.0 || uMax > 1.0 || vMin < 0.0 || vMax > 1.0) {
+			std::cout << "resizing u,v .." << std::endl;
+
+			float uR = uMax - uMin;
+			float vR = vMax - vMin;
+
+			float s = std::max(uR, vR);
+			inUV /= s;
+			float tu = uMin / s;
+			float tv = vMin / s;
+
+			inUV.row(0) -= MatrixXf::Constant(1, inUV.cols(), tu - 0.000001);
+			inUV.row(1) -= MatrixXf::Constant(1, inUV.cols(), tv - 0.000001);
+
+			std::cout << "after, first v: " << inUV(0, 0) << ", " << inUV(1, 0) << endl;
+
+			uMax /= s;
+			uMax -= (tu - 0.000001);
+			vMax /= s;
+			vMax -= (tv - 0.000001);
+
+			std::cout << "after resizing, uv is between (" << 0.0 << ", " << 0.0 << ") and (" << uMax << ", " << vMax << ").\n";
+		}
+	}
 }
 
 void Viewer::setMeshOffset(double offset) {
