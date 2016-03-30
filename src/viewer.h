@@ -55,6 +55,7 @@ protected:
 	Vector2i mTranslateStart;
 
 	/* Data being processing */
+	float meshScale;
 	MatrixXu inF;
 	MatrixXf inV, inUV;
 	TriMesh mMesh;

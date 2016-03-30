@@ -38,10 +38,17 @@ Viewer::Viewer() : Screen(Eigen::Vector2i(1024, 758), "Shell Maps Viewer") {
 		updateMesh();
 	});
 
-	b = new Button(window, "ScaleX10");
+	b = new Button(window, "scale! factor from stdin");
 	b->setCallback([&] {
-		inV *= 10.0;
-		std::cout << "mesh scale x10!" << std::endl;
+		std::cout << "input scale factor: " << std::endl;
+		float s = 1.0;
+		std::cin >> s;
+		if (s <= 0) {
+			std::cout << "invalid scale factor." << std::endl;
+		}
+		inV *= (s / meshScale);
+		meshScale = s;
+		std::cout << "mesh has been scaled x" << meshScale << "!." << std::endl;
 		updateMesh();
 	});
 
@@ -418,6 +425,10 @@ void Viewer::loadInput(std::string & meshFileName) {
 	inUV.resize(0, 0);
 
 	loadObjShareVertexNotShareTexcoord(meshFileName, inF, inV, inUV);
+	meshScale = 1.0;
+	if (inUV.cols() > 0) {
+		resizeUV();
+	}
 }
 
 void Viewer::updateMesh() {
@@ -425,7 +436,6 @@ void Viewer::updateMesh() {
 
 	computeVertexNormals(inF, inV, N, true);
 	if (inUV.cols() > 0)
-		resizeUV();
 		computeVertexTangents(inF, inV, inUV, DPDU, DPDV, true);
 
 	mMesh.free();
